@@ -9,12 +9,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\http\Example.hpp">
+    <ClInclude Include="include\http\Time.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Example.cpp">
+    <ClCompile Include="source\Time.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
