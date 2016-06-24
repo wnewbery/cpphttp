@@ -106,10 +106,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\Headers.cpp" />
     <ClCompile Include="source\Status.cpp" />
     <ClCompile Include="source\Time.cpp" />
   </ItemGroup>

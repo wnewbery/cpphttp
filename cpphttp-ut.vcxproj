@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="tests\Headers.cpp" />
     <ClCompile Include="tests\Time.cpp" />
     <ClCompile Include="tests\Main.cpp" />
   </ItemGroup>
