@@ -106,9 +106,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\Status.cpp" />
     <ClCompile Include="source\Time.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
