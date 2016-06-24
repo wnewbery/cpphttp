@@ -18,6 +18,9 @@
     <ClInclude Include="include\http\Headers.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\Url.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -27,6 +30,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="source\Headers.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Url.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

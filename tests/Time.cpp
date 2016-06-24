@@ -2,7 +2,7 @@
 #include "Time.hpp"
 #include <stdexcept>
 
-BOOST_AUTO_TEST_SUITE(TestExample)
+BOOST_AUTO_TEST_SUITE(TestTime)
 BOOST_AUTO_TEST_CASE(test)
 {
     BOOST_CHECK_EQUAL("Fri, 24 Jun 2016 09:47:55 GMT", http::format_time(1466761675));

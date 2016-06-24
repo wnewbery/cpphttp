@@ -15,5 +15,8 @@
     <ClCompile Include="tests\Headers.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="tests\Url.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
