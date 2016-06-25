@@ -4,6 +4,9 @@
     <Filter Include="source">
       <UniqueIdentifier>{f7f6cfcd-886c-427e-9ee9-646124bacd50}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\net">
+      <UniqueIdentifier>{ca91ff06-7758-40ca-b6ac-53c07dd80106}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests\Main.cpp">
@@ -17,6 +20,12 @@
     </ClCompile>
     <ClCompile Include="tests\Url.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\net\TcpSocket.cpp">
+      <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\net\TlsSocket.cpp">
+      <Filter>source\net</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

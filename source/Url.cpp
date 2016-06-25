@@ -114,6 +114,11 @@ namespace http
         : protocol(), host(), port(0), path(), query_params()
     {}
 
+    bool Url::has_query_param(const std::string &name)const
+    {
+        return query_params.find(name) != query_params.end();
+    }
+
     const std::string &Url::query_param(const std::string &name)const
     {
         auto it = query_params.find(name);

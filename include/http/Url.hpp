@@ -86,6 +86,7 @@ namespace http
 
         Url();
 
+        bool has_query_param(const std::string &name)const;
         const std::string &query_param(const std::string &name)const;
         const QueryParamList query_param_list(const std::string &name)const;
     };

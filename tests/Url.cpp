@@ -46,6 +46,11 @@ BOOST_AUTO_TEST_CASE(url_parse_request)
     BOOST_CHECK_EQUAL("value", x.query_param("key"));
     BOOST_CHECK_EQUAL("val2", x.query_param("key2"));
 
+    x = http::Url::parse_request("/index.html?key&key2=val2");
+    BOOST_CHECK(x.has_query_param("key"));
+    BOOST_CHECK_EQUAL("", x.query_param("key"));
+    BOOST_CHECK_EQUAL("val2", x.query_param("key2"));
+
     x = http::Url::parse_request("/index.html?key%5B%5D=a&key%5B%5D=b&key%5B%5D=c");
     BOOST_CHECK_EQUAL("a", x.query_param("key[]"));
     auto y = x.query_param_list("key[]");
