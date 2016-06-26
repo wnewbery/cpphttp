@@ -111,8 +111,8 @@ BOOST_AUTO_TEST_CASE(invalid)
     parser.reset();
     str =
         "HTTP/1.1 200 OK\r\n"
-        "Date Sun, 06 Mar 2016 12:00:13 GMT\r\n" //invalid
-        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type application/json; charset=UTF-8\r\n" //invalid
         "Content-Length: 23\r\n"
         "Connection: close\r\n"
         "\r\n"

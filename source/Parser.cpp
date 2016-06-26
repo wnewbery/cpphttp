@@ -41,10 +41,15 @@ namespace http
                 if (line.empty())
                 {
                     //end of headers
-                    if (message.headers.get("Transfer-Encoding") == "chunked")
+                    auto transfer_encoding = message.headers.find("Transfer-Encoding");
+                    if (transfer_encoding != message.headers.end())
                     {
-                        expected_body_len = 0;
-                        parser_status = READING_BODY_CHUNKED_LENGTH;
+                        if (transfer_encoding->second == "chunked")
+                        {
+                            expected_body_len = 0;
+                            parser_status = READING_BODY_CHUNKED_LENGTH;
+                        }
+                        else throw std::runtime_error("Unknown Transfer-Encoding " + transfer_encoding->second);
                     }
                     else
                     {
@@ -178,6 +183,7 @@ namespace http
     void Parser<IMPL, Message>::add_header(const std::string &line)
     {
         auto colon = line.find(':', 0);
+        if (colon == std::string::npos) throw std::runtime_error("Invalid header line");
         auto first_val = line.find_first_not_of(' ', colon + 1);
         std::string name = line.substr(0, colon);
         std::string value = line.substr(first_val);
