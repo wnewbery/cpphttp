@@ -54,6 +54,18 @@
     <ClInclude Include="include\http\net\TcpListenSocket.hpp">
       <Filter>include\net</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\Request.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\Method.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\Response.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\Parser.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -85,6 +97,12 @@
     </ClCompile>
     <ClCompile Include="source\net\Socket.cpp">
       <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Method.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Parser.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

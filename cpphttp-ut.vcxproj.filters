@@ -27,5 +27,8 @@
     <ClCompile Include="tests\net\TlsSocket.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
+    <ClCompile Include="tests\Parser.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

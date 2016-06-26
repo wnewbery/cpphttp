@@ -23,6 +23,8 @@ namespace http
         const_iterator end()const { return data.end(); }
         const_iterator cend()const { return data.cend(); }
 
+        void clear() { data.clear(); }
+
         void add(const std::string &key, const std::string &value)
         {
             data[key] = value;
@@ -32,6 +34,10 @@ namespace http
             return data.count(key) > 0;
         }
         const std::string& get(const std::string &key)const;
+        const_iterator find(const std::string &key)const
+        {
+            return data.find(key);
+        }
 
         ContentType content_type()const;
         void content_type(const std::string &mime, const std::string &charset = std::string())

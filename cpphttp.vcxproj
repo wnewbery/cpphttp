@@ -107,6 +107,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\http\Headers.hpp" />
+    <ClInclude Include="include\http\Method.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
     <ClInclude Include="include\http\net\Net.hpp" />
     <ClInclude Include="include\http\net\OpenSslSocket.hpp" />
@@ -115,6 +116,9 @@
     <ClInclude Include="include\http\net\TcpListenSocket.hpp" />
     <ClInclude Include="include\http\net\TcpSocket.hpp" />
     <ClInclude Include="include\http\net\TlsSocket.hpp" />
+    <ClInclude Include="include\http\Request.hpp" />
+    <ClInclude Include="include\http\Parser.hpp" />
+    <ClInclude Include="include\http\Response.hpp" />
     <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
     <ClInclude Include="include\http\Url.hpp" />
@@ -122,12 +126,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Headers.cpp" />
+    <ClCompile Include="source\Method.cpp" />
     <ClCompile Include="source\net\Net.cpp" />
     <ClCompile Include="source\net\OpenSslSocket.cpp" />
     <ClCompile Include="source\net\SchannelSocket.cpp" />
     <ClCompile Include="source\net\Socket.cpp" />
     <ClCompile Include="source\net\TcpListenSocket.cpp" />
     <ClCompile Include="source\net\TcpSocket.cpp" />
+    <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\Status.cpp" />
     <ClCompile Include="source\Time.cpp" />
     <ClCompile Include="source\Url.cpp" />
