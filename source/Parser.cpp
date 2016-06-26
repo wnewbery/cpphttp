@@ -28,16 +28,14 @@ namespace http
 
         while (p != end)
         {
-            size_t len2 = 0;
-            if (parser_status == NOT_STARTED && read_line(&line, &len2, p, end - p))
+            if (parser_status == NOT_STARTED && read_line(&line, &p, end))
             {
                 assert(buffer.empty());
                 ((IMPL*)this)->read_first_line(line);
                 parser_status = READING_HEADERS;
             }
-            p += len2; len2 = 0;
 
-            if (parser_status == READING_HEADERS && read_line(&line, &len2, p, end - p))
+            if (parser_status == READING_HEADERS && read_line(&line, &p, end))
             {
                 assert(buffer.empty());
                 if (line.empty())
@@ -64,7 +62,6 @@ namespace http
                 }
                 else add_header(line);
             }
-            p += len2; len2 = 0;
 
             if (parser_status == READING_BODY || parser_status == READING_BODY_CHUNKED)
             {
@@ -84,14 +81,13 @@ namespace http
                 }
             }
 
-            if (parser_status == READING_BODY_CHUNKED_TERMINATOR && read_line(&line, &len2, p, end - p))
+            if (parser_status == READING_BODY_CHUNKED_TERMINATOR && read_line(&line, &p, end))
             {
                 if (line.empty()) parser_status = READING_BODY_CHUNKED_LENGTH;
                 else throw std::runtime_error("Expected chunk \\r\\n terminator");
             }
-            p += len2; len2 = 0;
 
-            if (parser_status == READING_BODY_CHUNKED_LENGTH && read_line(&line, &len2, p, end - p))
+            if (parser_status == READING_BODY_CHUNKED_LENGTH && read_line(&line, &p, end))
             {
                 auto chunk_len = std::stoul(line, nullptr, 16);
                 if (chunk_len)
@@ -101,15 +97,13 @@ namespace http
                 }
                 else parser_status = READING_TRAILER_HEADERS;
             }
-            p += len2; len2 = 0;
 
-            if (parser_status == READING_TRAILER_HEADERS && read_line(&line, &len2, p, end - p))
+            if (parser_status == READING_TRAILER_HEADERS && read_line(&line, &p, end))
             {
                 assert(buffer.empty());
                 if (line.empty()) parser_status = COMPLETED; //end of headers
                 else add_header(line);
             }
-            p += len2; len2 = 0;
         }
 
         assert(p > data && p <= end);
@@ -118,25 +112,25 @@ namespace http
     }
 
     template<class IMPL, class Message>
-    bool Parser<IMPL, Message>::read_line(std::string * line, size_t *consumed_len, const uint8_t *data, size_t len)
+    bool Parser<IMPL, Message>::read_line(std::string * line, const uint8_t **pdata, const uint8_t *end)
     {
-        if (!len) return false;
+        auto data = *pdata;
+        if (data == end) return false;
 
         //The last byte of buffer might be a \r, and the first byte of data might be a \n
         if (buffer.size() && buffer.back() == '\r' && data[0] == '\n')
         {
             line->assign(buffer.data(), buffer.data() + buffer.size() - 1); //assign, but exclude the \r
             buffer.clear();
-            *consumed_len = 1; //1 for the \n
+            (*pdata) += 1; //1 for the \n
             return true;
         }
 
         auto p = data;
-        auto end = data + len - 1;
         while (true)
         {
             //looking for \r\n, so search for \r first and ignore the last byte
-            auto p2 = (const uint8_t*)memchr(p, '\r', end - p);
+            auto p2 = (const uint8_t*)memchr(p, '\r', end - p - 1);
             if (p2)
             {
                 if (p2[1] == '\n')
@@ -144,7 +138,7 @@ namespace http
                     //found end of string
                     line->assign(buffer.data(), buffer.data() + buffer.size());
                     line->insert(line->end(), data, p2);
-                    *consumed_len = p2 - data + 2;
+                    *pdata = p2 + 2;
                     buffer.clear();
                     return true;
                 }
@@ -157,8 +151,8 @@ namespace http
             else break; //reached end of buffer
         }
         //not found, so all of data must be part of the line
-        buffer.insert(buffer.end(), data, data + len);
-        *consumed_len = len;
+        buffer.insert(buffer.end(), data, end);
+        *pdata = end;
         return false;
     }
 

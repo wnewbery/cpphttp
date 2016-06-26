@@ -52,7 +52,7 @@ namespace http
          * @return True if a line was read. Data may be consumed and saved in this->buffer without
          * a full line being read, with false being returned but consumed_len greater than 0.
          */
-        bool read_line(std::string *line, size_t *consumed_len, const uint8_t *data, size_t len);
+        bool read_line(std::string *line, const uint8_t **data, const uint8_t *end);
         void add_header(const std::string &line);
     };
 
