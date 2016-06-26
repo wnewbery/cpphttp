@@ -51,6 +51,9 @@
     <ClInclude Include="include\http\net\TlsSocket.hpp">
       <Filter>include\net</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\net\TcpListenSocket.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">

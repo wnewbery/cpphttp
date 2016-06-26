@@ -112,6 +112,7 @@
     <ClInclude Include="include\http\net\OpenSslSocket.hpp" />
     <ClInclude Include="include\http\net\SchannelSocket.hpp" />
     <ClInclude Include="include\http\net\Socket.hpp" />
+    <ClInclude Include="include\http\net\TcpListenSocket.hpp" />
     <ClInclude Include="include\http\net\TcpSocket.hpp" />
     <ClInclude Include="include\http\net\TlsSocket.hpp" />
     <ClInclude Include="include\http\Status.hpp" />

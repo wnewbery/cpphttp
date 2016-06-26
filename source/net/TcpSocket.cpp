@@ -23,6 +23,22 @@ namespace http
     {
         disconnect();
     }
+
+    TcpSocket::TcpSocket(TcpSocket &&mv)
+        : socket(), _host(std::move(mv._host)), _port(mv._port)
+    {
+        socket = mv.socket;
+        mv.socket = INVALID_SOCKET;
+    }
+    TcpSocket& TcpSocket::operator = (TcpSocket &&mv)
+    {
+        socket = mv.socket;
+        mv.socket = INVALID_SOCKET;
+        _host = std::move(mv._host);
+        _port = mv._port;
+        return *this;
+    }
+
     void TcpSocket::set_socket(SOCKET _socket, const sockaddr *address)
     {
         if (socket != INVALID_SOCKET) throw std::runtime_error("Already connected");
