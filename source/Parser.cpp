@@ -51,7 +51,16 @@ namespace http
                         auto it = message.headers.find("Content-Length");
                         if (it != message.headers.end())
                         {
-                            expected_body_len = std::stoul(it->second);
+                            try
+                            {
+                                size_t count;
+                                expected_body_len = (StatusCode)std::stoul(it->second, &count);
+                                if (count != it->second.size()) throw std::invalid_argument("Non-numeric trailing text");
+                            }
+                            catch (const std::invalid_argument &)
+                            {
+                                throw std::runtime_error("Invalid Content-Length");
+                            }
                             parser_status = READING_BODY;
                         }
                         else
@@ -89,13 +98,22 @@ namespace http
 
             if (parser_status == READING_BODY_CHUNKED_LENGTH && read_line(&line, &p, end))
             {
-                auto chunk_len = std::stoul(line, nullptr, 16);
-                if (chunk_len)
+                try
                 {
-                    parser_status = READING_BODY_CHUNKED;
-                    expected_body_len += chunk_len;
+                    size_t count;
+                    auto chunk_len = std::stoul(line, &count, 16);
+                    if (count != line.size()) throw std::invalid_argument("Non-numeric trailing text");
+                    if (chunk_len)
+                    {
+                        parser_status = READING_BODY_CHUNKED;
+                        expected_body_len += chunk_len;
+                    }
+                    else parser_status = READING_TRAILER_HEADERS;
                 }
-                else parser_status = READING_TRAILER_HEADERS;
+                catch (const std::invalid_argument &)
+                {
+                    throw std::runtime_error("Invalid chunked transfer chunk length");
+                }
             }
 
             if (parser_status == READING_TRAILER_HEADERS && read_line(&line, &p, end))
@@ -187,8 +205,17 @@ namespace http
         auto ver_end = line.find(' ', 0);
         auto code_end = line.find(' ', ver_end + 1);
 
-        std::string code_str = line.substr(ver_end + 1, code_end - ver_end);
-        message.status_code = (StatusCode)std::stoi(code_str);
+        std::string code_str = line.substr(ver_end + 1, code_end - ver_end - 1);
+        try
+        {
+            size_t count;
+            message.status_code = (StatusCode)std::stoi(code_str, &count);
+            if (count != code_str.size()) throw std::invalid_argument("Non-numeric trailing text");
+        }
+        catch (const std::invalid_argument &)
+        {
+            throw std::runtime_error("Non-numeric status code");
+        }
         message.status_msg = line.substr(code_end + 1);
 
         //TODO: Version

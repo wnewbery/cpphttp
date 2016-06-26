@@ -80,4 +80,84 @@ BOOST_AUTO_TEST_CASE(chunked)
     BOOST_CHECK_EQUAL("Sun, 06 Mar 2016 12:00:13 GMT", headers.get("Date"));
     BOOST_CHECK_EQUAL("application/json; charset=UTF-8", headers.get("Content-Type"));
 }
+
+BOOST_AUTO_TEST_CASE(invalid)
+{
+    http::ResponseParser parser;
+    BOOST_CHECK(!parser.is_completed());
+
+    std::string str =
+        "HTTP/1.1200 OK\r\n" //invalid
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Content-Length: 23\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "{\"test\": \"Hello World\"}"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+
+    str =
+        "HTTP/1.1 2XX OK\r\n" //invalid
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Content-Length: 23\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "{\"test\": \"Hello World\"}"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+
+    parser.reset();
+    str =
+        "HTTP/1.1 200 OK\r\n"
+        "Date Sun, 06 Mar 2016 12:00:13 GMT\r\n" //invalid
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Content-Length: 23\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "{\"test\": \"Hello World\"}"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+
+    parser.reset();
+    str =
+        "HTTP/1.1 200 OK\r\n"
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Content-Length: AA\r\n" //invalid
+        "Connection: close\r\n"
+        "\r\n"
+        "{\"test\": \"Hello World\"}"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+
+    parser.reset();
+    str =
+        "HTTP/1.1 200 OK\r\n"
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Transfer-Encoding: unsupported\r\n" //unsupported
+        "Content-Length: 23\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "{\"test\": \"Hello World\"}"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+
+    parser.reset();
+    str =
+        "HTTP/1.1 200 OK\r\n"
+        "Date: Sun, 06 Mar 2016 12:00:13 GMT\r\n"
+        "Content-Type: application/json; charset=UTF-8\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "5\r\nHello\r\n"
+        "XX\r\n World\r\n" //invalid
+        "0\r\n"
+        "\r\n"
+        ;
+    BOOST_CHECK_THROW(parser.read((const uint8_t*)str.data(), str.size()), std::runtime_error);
+}
 BOOST_AUTO_TEST_SUITE_END()
