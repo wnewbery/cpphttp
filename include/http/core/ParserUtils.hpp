@@ -75,5 +75,19 @@ namespace http
          * @throws ParserError An invalid octet before end was reached.
          */
         void read_status_phrase(const char *begin, const char *end);
+
+        
+        /**Read the header name.
+         * @return The ':' after the name.
+         * @throws ParserError An invalid octet was found.
+         */
+        const char *read_header_name(const char *begin, const char *end);
+        /**Read to the end of the header value. Does not include OWS before or after.
+         * @return The first SP or HT, or end.
+         * @throws ParserError An invalid octet was found.
+         */
+        const char *read_header_value(const char *begin, const char *end);
+        /**@return The next non SP or HT element, or end.*/
+        const char *skip_ows(const char *begin, const char *end);
     }
 }

@@ -55,6 +55,14 @@ namespace http
                 if (c == '\t' || c == ' ') return true;
                 return false;
             }
+            bool is_field_vchar(char c)
+            {
+                return is_vchar(c) || is_obs_text(c);
+            }
+            bool is_ows(char c)
+            {
+                return c == ' ' || c == '\t';
+            }
 
             /**Read until end of token, does not validate if the end octet is allowed or not.*/
             const char *read_token(const char *begin, const char *end)
@@ -150,6 +158,33 @@ namespace http
             {
                 if (!is_reason_phrase_char(*p)) throw ParserError("Invalid octect in response reason phrase");
             }
+        }
+
+        const char *read_header_name(const char *begin, const char *end)
+        {
+            auto p = read_token(begin, end);
+            //Note: Do not try to allow whitespace here, even for compatibility, RFC 7230 3.2.4
+            //"A server MUST reject any received request message that contains whitespace between
+            //a header field - name and colon"
+            if (p >= end || p[0] != ':') throw ParserError("Expected ':' after header name");
+            return p;
+        }
+
+        const char *read_header_value(const char *begin, const char *end)
+        {
+            if (begin == end || is_ows(*begin)) throw ParserError("Header values can not be empty");
+            for (auto p = begin + 1; p < end; ++p)
+            {
+                if (is_ows(*p)) return p;
+                else if (!is_field_vchar(*p)) throw ParserError("Invalid octet in header field value");
+            }
+            return end;
+        }
+
+        const char *skip_ows(const char *begin, const char *end)
+        {
+            while (begin < end && is_ows(*begin)) ++begin;
+            return begin;
         }
     }
 }

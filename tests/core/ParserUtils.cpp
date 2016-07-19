@@ -134,4 +134,40 @@ BOOST_AUTO_TEST_CASE(test_read_status_phrase)
 
     BOOST_CHECK_THROW(f("Not\nFound"), ParserError);
 }
+
+
+BOOST_AUTO_TEST_CASE(test_skip_ows)
+{
+    auto f = [](std::string str) { return read_str(str, skip_ows); };
+    BOOST_CHECK_EQUAL("", f(""));
+    BOOST_CHECK_EQUAL("", f("   \t   "));
+    BOOST_CHECK_EQUAL("value", f("value"));
+    BOOST_CHECK_EQUAL("value", f("   \tvalue"));
+}
+
+BOOST_AUTO_TEST_CASE(test_read_header_name)
+{
+    auto f = [](std::string str) { return read_str(str, read_header_name); };
+    BOOST_CHECK_EQUAL(": value", f("Content-Type: value"));
+
+    BOOST_CHECK_THROW(f("invalid[]: value"), ParserError);
+    BOOST_CHECK_THROW(f("no-colon"), ParserError);
+    BOOST_CHECK_THROW(f("invalid-sp : value"), ParserError);
+    BOOST_CHECK_THROW(f(" invalid-sp:value"), ParserError);
+}
+
+BOOST_AUTO_TEST_CASE(test_read_header_value)
+{
+    auto f = [](std::string str) { return read_str(str, read_header_value); };
+    BOOST_CHECK_EQUAL("", f("value"));
+    BOOST_CHECK_EQUAL(" ", f("value "));
+    BOOST_CHECK_EQUAL("\t", f("value\t"));
+    BOOST_CHECK_EQUAL("   \t ", f("value   \t "));
+
+    BOOST_CHECK_THROW(f("invalid\nvalue"), ParserError);
+    BOOST_CHECK_THROW(f(""), ParserError);
+    BOOST_CHECK_THROW(f(" "), ParserError);
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
