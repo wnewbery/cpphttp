@@ -106,6 +106,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\http\core\ParserUtils.hpp" />
     <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
@@ -126,6 +127,7 @@
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\core\ParserUtils.cpp" />
     <ClCompile Include="source\Headers.cpp" />
     <ClCompile Include="source\Method.cpp" />
     <ClCompile Include="source\net\Net.cpp" />

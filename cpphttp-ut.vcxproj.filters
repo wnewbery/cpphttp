@@ -7,6 +7,9 @@
     <Filter Include="source\net">
       <UniqueIdentifier>{ca91ff06-7758-40ca-b6ac-53c07dd80106}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\core">
+      <UniqueIdentifier>{bab0b4a7-a771-47f5-93dd-7c0e7217d558}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests\Main.cpp">
@@ -29,6 +32,9 @@
     </ClCompile>
     <ClCompile Include="tests\Parser.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\core\ParserUtils.cpp">
+      <Filter>source\core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

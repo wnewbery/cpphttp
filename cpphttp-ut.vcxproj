@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="tests\core\ParserUtils.cpp" />
     <ClCompile Include="tests\Headers.cpp" />
     <ClCompile Include="tests\net\TcpSocket.cpp" />
     <ClCompile Include="tests\net\TlsSocket.cpp" />

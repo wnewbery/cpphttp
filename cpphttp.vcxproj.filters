@@ -13,6 +13,12 @@
     <Filter Include="include\net">
       <UniqueIdentifier>{ebe0e8a3-a934-4c05-8e63-8e7c6991483e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\core">
+      <UniqueIdentifier>{85370022-6dac-4e41-9dfa-e5a50dd32a94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\core">
+      <UniqueIdentifier>{82103f8f-0307-4ab6-ac6f-b043fd4d7540}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http\Time.hpp">
@@ -69,6 +75,9 @@
     <ClInclude Include="include\http\Writer.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\core\ParserUtils.hpp">
+      <Filter>include\core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -106,6 +115,9 @@
     </ClCompile>
     <ClCompile Include="source\Parser.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\ParserUtils.cpp">
+      <Filter>source\core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
