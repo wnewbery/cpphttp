@@ -66,6 +66,9 @@
     <ClInclude Include="include\http\Parser.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\Writer.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">

@@ -122,6 +122,7 @@
     <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
     <ClInclude Include="include\http\Url.hpp" />
+    <ClInclude Include="include\http\Writer.hpp" />
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>
