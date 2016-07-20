@@ -36,8 +36,5 @@
     <ClCompile Include="tests\core\Parser.cpp">
       <Filter>source\core</Filter>
     </ClCompile>
-    <ClCompile Include="tests\ParserOld.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
