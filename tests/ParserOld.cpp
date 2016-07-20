@@ -6,7 +6,7 @@ using namespace http;
 BOOST_AUTO_TEST_SUITE(TestParser)
 BOOST_AUTO_TEST_CASE(response)
 {
-    http::ResponseParser parser;
+    http::ResponseParser2 parser;
     BOOST_CHECK(!parser.is_completed());
 
     std::string response =
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(response)
 }
 BOOST_AUTO_TEST_CASE(request)
 {
-    http::RequestParser parser;
+    http::RequestParser2 parser;
     BOOST_CHECK(!parser.is_completed());
 
     std::string response =
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(request)
 }
 BOOST_AUTO_TEST_CASE(chunked)
 {
-    http::ResponseParser parser;
+    http::ResponseParser2 parser;
     BOOST_CHECK(!parser.is_completed());
 
     std::string response =
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(chunked)
 
 BOOST_AUTO_TEST_CASE(invalid)
 {
-    http::ResponseParser parser;
+    http::ResponseParser2 parser;
     BOOST_CHECK(!parser.is_completed());
 
     std::string str =

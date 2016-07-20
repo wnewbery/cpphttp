@@ -106,6 +106,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\http\core\Parser.hpp" />
     <ClInclude Include="include\http\core\ParserUtils.hpp" />
     <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
@@ -123,10 +124,12 @@
     <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
     <ClInclude Include="include\http\Url.hpp" />
+    <ClInclude Include="include\http\Version.hpp" />
     <ClInclude Include="include\http\Writer.hpp" />
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\core\Parser.cpp" />
     <ClCompile Include="source\core\ParserUtils.cpp" />
     <ClCompile Include="source\Headers.cpp" />
     <ClCompile Include="source\Method.cpp" />
@@ -136,7 +139,7 @@
     <ClCompile Include="source\net\Socket.cpp" />
     <ClCompile Include="source\net\TcpListenSocket.cpp" />
     <ClCompile Include="source\net\TcpSocket.cpp" />
-    <ClCompile Include="source\Parser.cpp" />
+    <ClCompile Include="source\ParserOld.cpp" />
     <ClCompile Include="source\Status.cpp" />
     <ClCompile Include="source\Time.cpp" />
     <ClCompile Include="source\Url.cpp" />

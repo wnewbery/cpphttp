@@ -27,6 +27,7 @@ namespace http
 
         void add(const std::string &key, const std::string &value)
         {
+            //TODO: Deal with multiple headers with same name
             data[key] = value;
         }
         bool has(const std::string &key)const
@@ -49,6 +50,13 @@ namespace http
         {
             content_type(type.mime, type.charset);
         }
+
+        void remove(const std::string &key)
+        {
+            data.erase(key);
+        }
+
+        size_t size()const { return data.size(); }
     private:
         Container data;
     };

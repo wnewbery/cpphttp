@@ -1,14 +1,15 @@
 #include "Parser.hpp"
 #include <cassert>
+#include "..\include\http\core\Parser.hpp"
 namespace http
 {
     template<class IMPL, class Message>
-    Parser<IMPL,Message>::Parser()
+    Parser2<IMPL,Message>::Parser2()
     {
         reset();
     }
     template<class IMPL, class Message>
-    void Parser<IMPL, Message>::reset()
+    void Parser2<IMPL, Message>::reset()
     {
         parser_status = NOT_STARTED;
 
@@ -20,7 +21,7 @@ namespace http
     }
 
     template<class IMPL, class Message>
-    size_t Parser<IMPL, Message>::read(const uint8_t * data, size_t len)
+    size_t Parser2<IMPL, Message>::read(const uint8_t * data, size_t len)
     {
         assert(len > 0);
         std::string line;
@@ -135,7 +136,7 @@ namespace http
     }
 
     template<class IMPL, class Message>
-    bool Parser<IMPL, Message>::read_line(std::string * line, const uint8_t **pdata, const uint8_t *end)
+    bool Parser2<IMPL, Message>::read_line(std::string * line, const uint8_t **pdata, const uint8_t *end)
     {
         auto data = *pdata;
         if (data == end) return false;
@@ -180,7 +181,7 @@ namespace http
     }
 
     template<class IMPL, class Message>
-    void Parser<IMPL, Message>::add_header(const std::string &line)
+    void Parser2<IMPL, Message>::add_header(const std::string &line)
     {
         auto colon = line.find(':', 0);
         if (colon == std::string::npos) throw std::runtime_error("Invalid header line");
@@ -190,7 +191,7 @@ namespace http
         message.headers.add(name, value);
     }
 
-    void RequestParser::read_first_line(const std::string &line)
+    void RequestParser2::read_first_line(const std::string &line)
     {
         //e.g. 'GET /index.html HTTP/1.1'
         auto method_end = line.find(' ');
@@ -205,7 +206,7 @@ namespace http
         //TODO: Version
     }
 
-    void ResponseParser::read_first_line(const std::string &line)
+    void ResponseParser2::read_first_line(const std::string &line)
     {
         //e.g. 'HTTP/1.1 200 OK'
         auto ver_end = line.find(' ', 0);
@@ -227,6 +228,6 @@ namespace http
         //TODO: Version
     }
 
-    template class Parser<RequestParser, Request>;
-    template class Parser<ResponseParser, Response>;
+    template class Parser2<RequestParser2, Request>;
+    template class Parser2<ResponseParser2, Response>;
 }

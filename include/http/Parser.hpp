@@ -8,7 +8,7 @@
 namespace http
 {
     template<class IMPL, class Message>
-    class Parser
+    class Parser2
     {
     public:
         enum ParserStatus
@@ -23,7 +23,7 @@ namespace http
             COMPLETED
         };
 
-        Parser();
+        Parser2();
         void reset();
 
         size_t read(const uint8_t *data, size_t len);
@@ -56,21 +56,21 @@ namespace http
         void add_header(const std::string &line);
     };
 
-    class RequestParser : public Parser<RequestParser, Request>
+    class RequestParser2 : public Parser2<RequestParser2, Request>
     {
     public:
         Request& request() { return message; }
     protected:
-        friend class Parser<RequestParser, Request>;
+        friend class Parser2<RequestParser2, Request>;
         void read_first_line(const std::string &line);
     };
 
-    class ResponseParser : public Parser<ResponseParser, Response>
+    class ResponseParser2 : public Parser2<ResponseParser2, Response>
     {
     public:
         Response& response() { return message; }
     protected:
-        friend class Parser<ResponseParser, Response>;
+        friend class Parser2<ResponseParser2, Response>;
         void read_first_line(const std::string &line);
     };
 }

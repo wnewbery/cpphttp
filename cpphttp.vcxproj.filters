@@ -78,6 +78,12 @@
     <ClInclude Include="include\http\core\ParserUtils.hpp">
       <Filter>include\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\core\Parser.hpp">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\Version.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -113,11 +119,14 @@
     <ClCompile Include="source\Method.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="source\Parser.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="source\core\ParserUtils.cpp">
       <Filter>source\core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\Parser.cpp">
+      <Filter>source\core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ParserOld.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -73,4 +73,10 @@ namespace http
     };
 
     std::string default_status_msg(StatusCode sc);
+
+    struct Status
+    {
+        StatusCode code;
+        std::string msg;
+    };
 }

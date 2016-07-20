@@ -1,5 +1,6 @@
 #pragma once
 #include <stdexcept>
+#include "../Version.hpp"
 namespace http
 {
     /**@brief Errors while parsing HTTP messages.
@@ -40,12 +41,6 @@ namespace http
          * @throws ParserError An invalid octet, or end is encountered.
          */
         const char *read_uri(const char *begin, const char *end);
-        /**Version info read by read_version, read_request_version, read_response_version.*/
-        struct Version
-        {
-            int major;
-            int minor;
-        };
         /**Reads the HTTP version for either the request or response line.
          * This must be in the form "HTTP/a.b", multiple digits are allowed.
          * @return The end of the version, generally either SP or CRLF, but not validated.
