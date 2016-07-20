@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="tests\client\ClientConnection.cpp" />
     <ClCompile Include="tests\core\Parser.cpp" />
     <ClCompile Include="tests\core\ParserUtils.cpp" />
     <ClCompile Include="tests\Headers.cpp" />
@@ -128,6 +129,9 @@
     <ClCompile Include="tests\Time.cpp" />
     <ClCompile Include="tests\Main.cpp" />
     <ClCompile Include="tests\Url.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="tests\TestSocket.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -10,16 +10,15 @@ namespace http
     class Response
     {
     public:
-        StatusCode status_code;
-        std::string status_msg;
+        Status status;
 
         Headers headers;
-        std::vector<uint8_t> body;
+        std::string body;
 
-        void status(StatusCode sc)
+        void status_code(StatusCode sc)
         {
-            status_code = sc;
-            status_msg = default_status_msg(sc);
+            status.code = sc;
+            status.msg = default_status_msg(sc);
         }
     };
 }

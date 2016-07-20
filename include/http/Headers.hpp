@@ -30,6 +30,11 @@ namespace http
             //TODO: Deal with multiple headers with same name
             data[key] = value;
         }
+        void set(const std::string &key, const std::string &value)
+        {
+            //TODO: Error if already have multiple headers with same name
+            data[key] = value;
+        }
         bool has(const std::string &key)const
         {
             return data.count(key) > 0;

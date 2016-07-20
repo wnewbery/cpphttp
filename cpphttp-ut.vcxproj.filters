@@ -10,6 +10,9 @@
     <Filter Include="source\core">
       <UniqueIdentifier>{bab0b4a7-a771-47f5-93dd-7c0e7217d558}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\client">
+      <UniqueIdentifier>{0b826519-4ca7-4708-890d-17e4a0808f64}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests\Main.cpp">
@@ -36,5 +39,13 @@
     <ClCompile Include="tests\core\Parser.cpp">
       <Filter>source\core</Filter>
     </ClCompile>
+    <ClCompile Include="tests\client\ClientConnection.cpp">
+      <Filter>source\client</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="tests\TestSocket.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

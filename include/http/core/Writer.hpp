@@ -25,15 +25,15 @@ namespace http
     }
     inline void write_response_header(std::ostream &os, const Response &response)
     {
-        os << "HTTP/1.1 " << response.status_code << " " << response.status_msg << "\r\n";
+        os << "HTTP/1.1 " << response.status.code << " " << response.status.msg << "\r\n";
         write_headers(os, response.headers);
     }
 
     template<class T> void add_default_headers(T &message)
     {
         Headers &headers = message.headers;
-        headers.add("Date", format_time(time(nullptr)));
-        if (!message.body.empty()) headers.add("Content-Length", std::to_string(message.body.size()));
+        headers.set("Date", format_time(time(nullptr)));
+        if (!message.body.empty()) headers.set("Content-Length", std::to_string(message.body.size()));
     }
 
     inline void send_request(Socket *socket, Request &request)

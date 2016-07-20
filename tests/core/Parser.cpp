@@ -168,33 +168,33 @@ BOOST_AUTO_TEST_CASE(test_response_parser) //only considers differences
         return{ p, str.c_str() + str.size() };
     };
 
-    parser.reset("GET");
+    parser.reset(GET);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\n12345Next"));
     BOOST_CHECK(parser.is_completed());
     BOOST_CHECK_EQUAL(5, parser.content_length());
     BOOST_CHECK_EQUAL("12345", parser.body());
 
-    parser.reset("HEAD");
+    parser.reset(HEAD);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 200 OK\r\nContent-Length: 50\r\n\r\nNext"));
     BOOST_CHECK(parser.is_completed());
 
-    parser.reset("CONNECT");
+    parser.reset(CONNECT);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 100 OK\r\nContent-Length: 50\r\n\r\nNext"));
     BOOST_CHECK(parser.is_completed());
 
-    parser.reset("GET");
+    parser.reset(GET);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 100 OK\r\n\r\nNext"));
     BOOST_CHECK(parser.is_completed());
 
-    parser.reset("GET");
+    parser.reset(GET);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 204 OK\r\n\r\nNext"));
     BOOST_CHECK(parser.is_completed());
 
-    parser.reset("GET");
+    parser.reset(GET);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 304 OK\r\n\r\nNext"));
     BOOST_CHECK(parser.is_completed());
 
-    parser.reset("CONNECT");
+    parser.reset(CONNECT);
     BOOST_CHECK_EQUAL("Next", read_str("HTTP/1.1 404 OK\r\nContent-Length: 5\r\n\r\n12345Next"));
     BOOST_CHECK(parser.is_completed());
 }

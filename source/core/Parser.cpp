@@ -222,7 +222,7 @@ namespace http
         return do_read<ResponseParser>(begin, end);
     }
 
-    void ResponseParser::reset(const std::string &_method)
+    void ResponseParser::reset(Method _method)
     {
         method = _method;
         BaseParser::reset();
@@ -236,10 +236,10 @@ namespace http
         auto p = parser::read_response_version(str, end, &_version);
         check_version();
         p = parser::read_status_code(p + 1, end, &sc);
-        status.code = (StatusCode)sc.code;
+        _status.code = (StatusCode)sc.code;
 
         parser::read_status_phrase(p + 1, end);
-        status.msg.assign(p + 1, end);
+        _status.msg.assign(p + 1, end);
 
         _state = HEADERS;
     }
@@ -247,9 +247,9 @@ namespace http
     void ResponseParser::start_body()
     {
         //TODO: Need to get method from the origenal request...
-        auto sc = status.code;
+        auto sc = _status.code;
         if (sc / 100 != 1 && sc != 204 && sc != 304 &&
-            method != "HEAD" && !(method == "CONNECT" && sc / 100 == 2))
+            method != HEAD && !(method == CONNECT && sc / 100 == 2))
         {
             BaseParser::start_body<false>();
         }

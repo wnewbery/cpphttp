@@ -1,7 +1,8 @@
 #pragma once
-#include "Headers.hpp"
-#include "Status.hpp"
 #include "ParserUtils.hpp"
+#include "../Headers.hpp"
+#include "../Status.hpp"
+#include "../Method.hpp"
 #include <algorithm>
 
 namespace http
@@ -115,12 +116,14 @@ namespace http
     {
     public:
         const char *read(const char *begin, const char *end);
-        void reset(const std::string &method);
+        void reset(Method method);
+
+        Status status()const { return _status; }
     private:
         friend class BaseParser;
 
-        std::string method;
-        Status status;
+        Method method;
+        Status _status;
 
         void read_first_line(const char *str, const char *end);
         void start_body();

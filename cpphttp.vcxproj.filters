@@ -19,6 +19,12 @@
     <Filter Include="source\core">
       <UniqueIdentifier>{82103f8f-0307-4ab6-ac6f-b043fd4d7540}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\client">
+      <UniqueIdentifier>{ba31c885-614c-4b6f-884a-5da7a98dd8c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\client">
+      <UniqueIdentifier>{fe821fdb-312a-4b42-a04b-f5ace7b0c64b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http\Time.hpp">
@@ -69,9 +75,6 @@
     <ClInclude Include="include\http\Response.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\http\Writer.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\http\core\ParserUtils.hpp">
       <Filter>include\core</Filter>
     </ClInclude>
@@ -80,6 +83,12 @@
     </ClInclude>
     <ClInclude Include="include\http\Version.hpp">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\client\ClientConnection.hpp">
+      <Filter>include\client</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\core\Writer.hpp">
+      <Filter>include\core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -121,6 +130,9 @@
     </ClCompile>
     <ClCompile Include="source\core\Parser.cpp">
       <Filter>source\core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\client\ClientConnection.cpp">
+      <Filter>source\client</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
