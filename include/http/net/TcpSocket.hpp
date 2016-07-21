@@ -16,6 +16,7 @@ namespace http
         TcpSocket& operator = (TcpSocket &&mv);
 
         void set_socket(SOCKET socket, const sockaddr *address);
+        SOCKET get_socket() { return socket; }
         void connect(const std::string &host, uint16_t port);
 
         virtual std::string address_str()const override;

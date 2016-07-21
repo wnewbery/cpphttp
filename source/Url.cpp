@@ -5,22 +5,23 @@ namespace http
     namespace
     {
         static const std::string EMPTY_STRING;
+        static const Url::QueryParamList EMPTY_LIST;
 
         char hex_value(char c)
         {
-            if (c >= '0' && c <= '9') return c - '0';
-            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            if (c >= '0' && c <= '9') return (char)(c - '0');
+            if (c >= 'a' && c <= 'f') return (char)(c - 'a' + 10);
+            if (c >= 'A' && c <= 'F') return (char)(c - 'A' + 10);
             throw std::runtime_error("Invalid percent encoding hex value");
         }
         char hex_value(char c1, char c2)
         {
-            return (hex_value(c1) << 4) | hex_value(c2);
+            return (char)((hex_value(c1) << 4) | hex_value(c2));
         }
         char hex_chr(char c)
         {
-            if (c < 10) return '0' + c;
-            else return 'A' + c - 10;
+            if (c < 10) return (char)('0' + c);
+            else return (char)('A' + c - 10);
         }
     }
 
@@ -87,8 +88,8 @@ namespace http
             else
             {
                 out += '%';
-                out += hex_chr(c >> 4);
-                out += hex_chr(c & 0x0F);
+                out += hex_chr((char)(c >> 4));
+                out += hex_chr((char)(c & 0x0F));
             }
         }
         return out;
@@ -105,8 +106,8 @@ namespace http
             else
             {
                 out += '%';
-                out += hex_chr(c >> 4);
-                out += hex_chr(c & 0x0F);
+                out += hex_chr((char)(c >> 4));
+                out += hex_chr((char)(c & 0x0F));
             }
         }
         return out;
@@ -151,7 +152,7 @@ namespace http
                     }
                 }
 
-                url.query_params.emplace(url_decode_query(key), url_decode_query(value));
+                url.query_params[url_decode_query(key)].push_back(url_decode_query(value));
                 i = j + 1;
             }
         }
@@ -171,14 +172,15 @@ namespace http
     const std::string &Url::query_param(const std::string &name)const
     {
         auto it = query_params.find(name);
-        if (it != query_params.end()) return it->second;
+        if (it != query_params.end()) return it->second.front();
         else return EMPTY_STRING;
     }
 
-    const Url::QueryParamList Url::query_param_list(const std::string &name)const
+    const Url::QueryParamList& Url::query_param_list(const std::string &name)const
     {
-        auto range = query_params.equal_range(name);
-        return { range.first, range.second };
+        auto it = query_params.find(name);
+        if (it != query_params.end()) return it->second;
+        else return EMPTY_LIST;
     }
 
     void Url::encode_request(std::ostream &os)const
@@ -188,17 +190,20 @@ namespace http
         bool first_param = true;
         for (auto &param : query_params)
         {
-            if (first_param)
+            for (auto &value : param.second)
             {
-                os << '?';
-                first_param = false;
-            }
-            else os << '&';
-            os << url_encode_query(param.first);
-            if (!param.second.empty())
-            {
-                os << '=';
-                os << url_decode_query(param.second);
+                if (first_param)
+                {
+                    os << '?';
+                    first_param = false;
+                }
+                else os << '&';
+                os << url_encode_query(param.first);
+                if (!param.second.empty())
+                {
+                    os << '=';
+                    os << url_decode_query(value);
+                }
             }
         }
     }

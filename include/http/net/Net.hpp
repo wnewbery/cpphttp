@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <stdexcept>
 
 namespace http
 {
@@ -8,6 +9,7 @@ namespace http
     // extern SecurityFunctionTableW *sspi;
 
     std::string errno_string(int err);
+#ifdef _WIN32
     std::string win_error_string(int err);
     inline std::string wsa_error_string(int err)
     {
@@ -17,6 +19,13 @@ namespace http
     {
         return wsa_error_string(err);
     }
+#else
+    inline std::string socket_error_string(int err)
+    {
+        return errno_string(err);
+    }
+#endif
+    
     int last_net_error();
 
     class NetworkError : public std::runtime_error

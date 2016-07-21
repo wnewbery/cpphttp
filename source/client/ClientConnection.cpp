@@ -2,6 +2,7 @@
 #include "core/Writer.hpp"
 #include "net/Socket.hpp"
 #include <cassert>
+#include <cstring>
 namespace http
 {
     ClientConnection::~ClientConnection()

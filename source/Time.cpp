@@ -8,7 +8,11 @@ namespace http
     {
         char buffer[sizeof("DDD, DD MMM YYYY HH:MM:SS GMT")];
         tm tm;
+#ifdef _MSC_VER
         gmtime_s(&tm, &utc);
+#else
+        gmtime_r(&utc, &tm);
+#endif
         size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", &tm);
         return {buffer, len};
     }
@@ -24,7 +28,11 @@ namespace http
             if (tm->tm_hour < 0 || tm->tm_hour > 23) return -1;
             if (tm->tm_min < 0 || tm->tm_min > 60) return -1;
             if (tm->tm_sec < 0 || tm->tm_sec > 60) return -1;
+#ifdef _MSC_VER
             return _mkgmtime(tm);
+#else
+            return timegm(tm);
+#endif
         }
         int get_tz_offset(const std::string &str)
         {

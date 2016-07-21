@@ -97,11 +97,11 @@ BOOST_AUTO_TEST_CASE(url_encode)
     BOOST_CHECK_EQUAL("https://example.com/example%26page.html", url.encode());
     BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
 
-    url.query_params.emplace("page", "1");
+    url.query_params["page"] = {"1"};
     BOOST_CHECK_EQUAL("https://example.com/example%26page.html?page=1", url.encode());
     BOOST_CHECK_EQUAL("/example%26page.html?page=1", url.encode_request());
 
-    url.query_params.emplace("page", "10");
+    url.query_params["page"] = {"1", "10"};
     BOOST_CHECK_EQUAL("https://example.com/example%26page.html?page=1&page=10", url.encode());
     BOOST_CHECK_EQUAL("/example%26page.html?page=1&page=10", url.encode_request());
 }

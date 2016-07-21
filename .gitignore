@@ -9,3 +9,6 @@
 /cpphttp.VC.db
 /cpphttp.VC.VC.opendb
 /cpphttp.vcxproj.user
+/bin
+/coverage
+/obj

@@ -98,7 +98,7 @@ namespace http
             else
             {
                 last_error = last_net_error();
-                ::closesocket(socket);
+                closesocket(socket);
                 continue;
             }
 
@@ -118,7 +118,7 @@ namespace http
             ::shutdown(socket, SD_SEND);
             char buffer[1];
             ::recv(socket, buffer, sizeof(buffer), 0);
-            ::closesocket(socket);
+            closesocket(socket);
             socket = INVALID_SOCKET;
         }
     }

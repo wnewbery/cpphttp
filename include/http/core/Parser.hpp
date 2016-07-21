@@ -10,18 +10,18 @@ namespace http
     class BaseParser
     {
     public:
+        /**Max size of any line. A buffer of this size will be capable of parsing any HTTP component.*/
+        static const size_t LINE_SIZE = 8192;
         /**Max size of first line.*/
-        static const size_t FIRST_LINE_LEN = 8192;
+        static const size_t FIRST_LINE_LEN = LINE_SIZE;
         /**Max number of headers.*/
         static const size_t MAX_HEADER_COUNT = 100;
         /**Max size of a single header line.*/
-        static const size_t MAX_HEADER_SIZE = 8192;
+        static const size_t MAX_HEADER_SIZE = LINE_SIZE;
         /**Max combined size of headers.*/
         static const size_t MAX_HEADERS_SIZE = 65536;
         /**Max size of a chunk length line.*/
         static const size_t MAX_CHUNK_LINE_SIZE = 10;
-        /**Max size of any line. A buffer of this size will be capable of parsing any HTTP component.*/
-        static const size_t LINE_SIZE = std::max(FIRST_LINE_LEN, MAX_HEADER_SIZE);
 
         enum State
         {
