@@ -1,4 +1,5 @@
 #include "Url.hpp"
+#include <sstream>
 namespace http
 {
     namespace
@@ -15,6 +16,11 @@ namespace http
         char hex_value(char c1, char c2)
         {
             return (hex_value(c1) << 4) | hex_value(c2);
+        }
+        char hex_chr(char c)
+        {
+            if (c < 10) return '0' + c;
+            else return 'A' + c - 10;
         }
     }
 
@@ -58,6 +64,49 @@ namespace http
             {
                 out += str[i];
                 ++i;
+            }
+        }
+        return out;
+    }
+
+    bool uri_unreserved_chr(char c)
+    {
+        if (c >= 'A' && c <= 'Z') return true;
+        if (c >= 'a' && c <= 'z') return true;
+        if (c >= '0' && c <= '9') return true;
+        return c == '-' || c == '_' || c == '.' || c == '~';
+    }
+    std::string url_encode_path(const std::string &str)
+    {
+        std::string out;
+        out.reserve(str.size());
+        for (auto c : str)
+        {
+            if (c == '/') out += '/';
+            else if (uri_unreserved_chr(c)) out += c;
+            else
+            {
+                out += '%';
+                out += hex_chr(c >> 4);
+                out += hex_chr(c & 0x0F);
+            }
+        }
+        return out;
+    }
+
+    std::string url_encode_query(const std::string &str)
+    {
+        std::string out;
+        out.reserve(str.size());
+        for (auto c : str)
+        {
+            if (c == ' ') out += '+';
+            else if (uri_unreserved_chr(c)) out += c;
+            else
+            {
+                out += '%';
+                out += hex_chr(c >> 4);
+                out += hex_chr(c & 0x0F);
             }
         }
         return out;
@@ -130,5 +179,60 @@ namespace http
     {
         auto range = query_params.equal_range(name);
         return { range.first, range.second };
+    }
+
+    void Url::encode_request(std::ostream &os)const
+    {
+        if (path.empty() || path[0] != '/') throw std::runtime_error("URL path must start with '/'");
+        os << url_encode_path(path);
+        bool first_param = true;
+        for (auto &param : query_params)
+        {
+            if (first_param)
+            {
+                os << '?';
+                first_param = false;
+            }
+            else os << '&';
+            os << url_encode_query(param.first);
+            if (!param.second.empty())
+            {
+                os << '=';
+                os << url_decode_query(param.second);
+            }
+        }
+    }
+
+    std::string Url::encode_request()const
+    {
+        std::stringstream ss;
+        encode_request(ss);
+        return ss.str();
+    }
+
+    void Url::encode(std::ostream &os)const
+    {
+        if (!protocol.empty())
+        {
+            os << protocol << ':';
+            if (host.empty()) throw std::runtime_error("URL cant have protocol without host");
+        }
+        if (!host.empty())
+        {
+            os << "//" << host;
+        }
+        if (port)
+        {
+            if (host.empty()) throw std::runtime_error("URL can not have port without host");
+            os << ':' << port;
+        }
+        encode_request(os);
+    }
+
+    std::string Url::encode()const
+    {
+        std::stringstream ss;
+        encode(ss);
+        return ss.str();
     }
 }

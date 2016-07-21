@@ -20,7 +20,10 @@ namespace http
     }
     inline void write_request_header(std::ostream &os, const Request &request)
     {
-        os << to_string(request.method) << " " << request.raw_url << " HTTP/1.1\r\n";
+        os << to_string(request.method) << " ";
+        if (!request.raw_url.empty()) os << request.raw_url;
+        else request.url.encode_request(os);
+        os << " HTTP/1.1\r\n";
         write_headers(os, request.headers);
     }
     inline void write_response_header(std::ostream &os, const Response &response)

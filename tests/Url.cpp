@@ -59,4 +59,51 @@ BOOST_AUTO_TEST_CASE(url_parse_request)
     BOOST_CHECK_EQUAL_COLLECTIONS(y.begin(), y.end(), values, values + 3);
 }
 
+
+
+BOOST_AUTO_TEST_CASE(url_encode)
+{
+    http::Url url;
+
+    BOOST_CHECK_THROW(url.encode(), std::runtime_error);
+    BOOST_CHECK_THROW(url.encode_request(), std::runtime_error);
+
+    url.path = "/example&page.html";
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.port = 80;
+    BOOST_CHECK_THROW(url.encode(), std::runtime_error);
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.port = 0;
+    url.host = "example.com";
+    BOOST_CHECK_EQUAL("//example.com/example%26page.html", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.port = 80;
+    BOOST_CHECK_EQUAL(80, url.port_or_default());
+    BOOST_CHECK_EQUAL("//example.com:80/example%26page.html", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.port = 0;
+    url.host = "";
+    url.protocol = "https";
+    BOOST_CHECK_EQUAL(443, url.port_or_default());
+    BOOST_CHECK_THROW(url.encode(), std::runtime_error);
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.host = "example.com";
+    BOOST_CHECK_EQUAL("https://example.com/example%26page.html", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html", url.encode_request());
+
+    url.query_params.emplace("page", "1");
+    BOOST_CHECK_EQUAL("https://example.com/example%26page.html?page=1", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html?page=1", url.encode_request());
+
+    url.query_params.emplace("page", "10");
+    BOOST_CHECK_EQUAL("https://example.com/example%26page.html?page=1&page=10", url.encode());
+    BOOST_CHECK_EQUAL("/example%26page.html?page=1&page=10", url.encode_request());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
