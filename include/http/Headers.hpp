@@ -35,6 +35,13 @@ namespace http
             //TODO: Error if already have multiple headers with same name
             data[key] = value;
         }
+        /**Set, if not already set.*/
+        void set_default(const std::string &key, const std::string &value)
+        {
+            auto &v = data[key];
+            if (v.empty()) v = value;
+        }
+
         bool has(const std::string &key)const
         {
             return data.count(key) > 0;

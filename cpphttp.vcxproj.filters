@@ -90,6 +90,12 @@
     <ClInclude Include="include\http\core\Writer.hpp">
       <Filter>include\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\client\Client.hpp">
+      <Filter>include\client</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\client\SocketFactory.hpp">
+      <Filter>include\client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -132,6 +138,9 @@
       <Filter>source\core</Filter>
     </ClCompile>
     <ClCompile Include="source\client\ClientConnection.cpp">
+      <Filter>source\client</Filter>
+    </ClCompile>
+    <ClCompile Include="source\client\Client.cpp">
       <Filter>source\client</Filter>
     </ClCompile>
   </ItemGroup>

@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="tests\client\Client.cpp" />
     <ClCompile Include="tests\client\ClientConnection.cpp" />
     <ClCompile Include="tests\core\Parser.cpp" />
     <ClCompile Include="tests\core\ParserUtils.cpp" />
@@ -132,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp" />
+    <ClInclude Include="tests\TestSocketFactory.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

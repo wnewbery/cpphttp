@@ -12,15 +12,19 @@ namespace http
         socket = std::move(new_socket);
     }
 
-    Response ClientConnection::make_request(Request &request)
+    void ClientConnection::send_request(Request &request)
     {
         assert(socket);
         add_default_headers(request);
-        send_request(socket.get(), request);
+        http::send_request(socket.get(), request);
 
         parser.reset(request.method);
+    }
 
-        char buffer[BaseParser::LINE_SIZE];
+    Response ClientConnection::recv_response()
+    {
+        assert(socket);
+        char buffer[ResponseParser::LINE_SIZE];
         size_t buffer_capacity = sizeof(buffer);
         size_t buffer_len = 0;
 

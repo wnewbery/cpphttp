@@ -8,9 +8,11 @@
 class TestSocket : public http::Socket
 {
 public:
+    TestSocket() : tls(false), port(80) {}
+
     virtual std::string address_str()const
     {
-        return "test";
+        return host;
     }
 
     virtual void disconnect() {}
@@ -34,6 +36,9 @@ public:
         send(buffer, len);
     }
 
+    bool tls;
+    std::string host;
+    uint16_t port;
     std::string recv_buffer;
     std::string send_buffer;
 };

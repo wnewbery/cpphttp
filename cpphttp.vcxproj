@@ -106,7 +106,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\http\client\Client.hpp" />
     <ClInclude Include="include\http\client\ClientConnection.hpp" />
+    <ClInclude Include="include\http\client\SocketFactory.hpp" />
     <ClInclude Include="include\http\core\Parser.hpp" />
     <ClInclude Include="include\http\core\ParserUtils.hpp" />
     <ClInclude Include="include\http\core\Writer.hpp" />
@@ -129,6 +131,7 @@
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\client\Client.cpp" />
     <ClCompile Include="source\client\ClientConnection.cpp" />
     <ClCompile Include="source\core\Parser.cpp" />
     <ClCompile Include="source\core\ParserUtils.cpp" />

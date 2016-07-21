@@ -42,9 +42,15 @@
     <ClCompile Include="tests\client\ClientConnection.cpp">
       <Filter>source\client</Filter>
     </ClCompile>
+    <ClCompile Include="tests\client\Client.cpp">
+      <Filter>source\client</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="tests\TestSocketFactory.hpp">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

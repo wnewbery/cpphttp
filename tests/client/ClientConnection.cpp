@@ -6,7 +6,7 @@ using namespace http;
 BOOST_AUTO_TEST_SUITE(TestClientConnection)
 
 
-BOOST_AUTO_TEST_CASE(no_connect)
+BOOST_AUTO_TEST_CASE(test)
 {
     std::unique_ptr<TestSocket> tmp(new TestSocket());
     auto socket = tmp.get();
