@@ -8,4 +8,5 @@ struct Startup
     {
         http::init_net();
     }
-}startup;
+};
+BOOST_GLOBAL_FIXTURE(Startup);

@@ -2,6 +2,7 @@
 #include "net/Os.hpp"
 
 #include "String.hpp"
+#include <cassert>
 
 #ifdef _WIN32
 namespace http
@@ -66,6 +67,9 @@ namespace http
     }
     void openssl_locking_callback(int mode, int type, const char *file, int line)
     {
+        assert(!openssl_mutexes.empty());
+        assert(type >= 0);
+        assert(type < (int)openssl_mutexes.size());
         if (mode & CRYPTO_LOCK) {
             pthread_mutex_lock(&(openssl_mutexes[type]));
         }

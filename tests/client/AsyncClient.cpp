@@ -3,6 +3,7 @@
 #include "../TestSocket.hpp"
 #include "../TestSocketFactory.hpp"
 #include "net/Net.hpp"
+#include <chrono>
 using namespace http;
 
 BOOST_AUTO_TEST_SUITE(TestClient)
@@ -94,7 +95,7 @@ BOOST_AUTO_TEST_CASE(sequential)
 
 BOOST_AUTO_TEST_CASE(callback)
 {
-    std::atomic<bool> done = false;
+    std::atomic<bool> done(false);
 
     TestSocketFactory socket_factory;
     socket_factory.recv_buffer =
@@ -129,7 +130,7 @@ BOOST_AUTO_TEST_CASE(callback)
 
 BOOST_AUTO_TEST_CASE(async_error)
 {
-    std::atomic<bool> done = false;
+    std::atomic<bool> done(false);
 
     class Factory : public SocketFactory
     {
@@ -231,6 +232,7 @@ BOOST_AUTO_TEST_CASE(parallel)
     client.make_request(&e);
     client.make_request(&f);
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     BOOST_CHECK_EQUAL(4U, socket_factory.connect_count.load());
     lock.unlock();
 

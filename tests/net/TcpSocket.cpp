@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(connect)
     }
     BOOST_CHECK(total > 0);
 
-    sock.disconnect();
+    BOOST_CHECK_NO_THROW(sock.disconnect());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

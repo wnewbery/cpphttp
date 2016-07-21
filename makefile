@@ -1,4 +1,4 @@
-LIBS := ssl crypto
+LIBS := pthread ssl crypto
 CFLAGS := -Wall -Wconversion -std=c++11
 LDFLAGS :=
 
