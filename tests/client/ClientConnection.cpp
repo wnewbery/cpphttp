@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(test)
 
     auto resp = conn.make_request(req);
     //TODO: Should check socket->send_buffer, but Date header and undefined order makes this tricky
-    BOOST_CHECK_EQUAL("", socket->recv_buffer);
+    BOOST_CHECK_EQUAL("", socket->recv_remaining());
     BOOST_CHECK_EQUAL(SC_OK, resp.status.code);
     BOOST_CHECK_EQUAL("OK", resp.status.msg);
     BOOST_CHECK_EQUAL("text/plain", resp.headers.get("Content-Type"));

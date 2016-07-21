@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(test)
 
         auto resp = client.make_request(req);
 
-        BOOST_CHECK_EQUAL("", socket_factory.last->recv_buffer);
+        BOOST_CHECK_EQUAL("", socket_factory.last->recv_remaining());
         BOOST_CHECK_EQUAL("localhost:80", req.headers.get("Host"));
         BOOST_CHECK_EQUAL("test", req.headers.get("User-Agent"));
 
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(test)
 
         auto resp = client.make_request(req);
 
-        BOOST_CHECK_EQUAL("", socket_factory.last->recv_buffer);
+        BOOST_CHECK_EQUAL("", socket_factory.last->recv_remaining());
         BOOST_CHECK_EQUAL("localhost:80", req.headers.get("Host"));
         BOOST_CHECK_EQUAL("test", req.headers.get("User-Agent"));
         BOOST_CHECK_EQUAL("1", req.headers.get("Content-Length"));

@@ -45,6 +45,10 @@
     <ClCompile Include="tests\client\Client.cpp">
       <Filter>source\client</Filter>
     </ClCompile>
+    <ClCompile Include="tests\client\AsyncClient.cpp">
+      <Filter>source\client</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\TestSocketFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp">

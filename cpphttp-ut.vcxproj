@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="tests\client\AsyncClient.cpp" />
     <ClCompile Include="tests\client\Client.cpp" />
     <ClCompile Include="tests\client\ClientConnection.cpp" />
     <ClCompile Include="tests\core\Parser.cpp" />
@@ -127,6 +128,7 @@
     <ClCompile Include="tests\Headers.cpp" />
     <ClCompile Include="tests\net\TcpSocket.cpp" />
     <ClCompile Include="tests\net\TlsSocket.cpp" />
+    <ClCompile Include="tests\TestSocketFactory.cpp" />
     <ClCompile Include="tests\Time.cpp" />
     <ClCompile Include="tests\Main.cpp" />
     <ClCompile Include="tests\Url.cpp" />
