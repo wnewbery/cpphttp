@@ -6,6 +6,7 @@
 #include <future>
 #include <queue>
 #include <list>
+#include <chrono>
 #include "../Request.hpp"
 #include "../Response.hpp"
 #include "../Headers.hpp"
@@ -68,6 +69,11 @@ namespace http
     /**Params for AsyncClient.*/
     struct AsyncClientParams
     {
+        AsyncClientParams()
+            : host(), port(80), tls(false), max_connections(4), rate_limit(-1)
+            , socket_factory(nullptr), default_headers()
+        {}
+
         /**Host to connect to.*/
         std::string host;
         /**Port to connect to.*/
@@ -79,6 +85,10 @@ namespace http
          * underlying protocol, but each has some overhead, and remote servers often impose limits.
          */
         unsigned max_connections;
+        /**If non-zero, this is the maximun number of requests that will be sent in a second across
+         * all connections.
+         */
+        int rate_limit;
         /**The socket factory to use to establish connections.
          * The socket factory must remain valid as long as the client, and the "connect" method
          * must be thread-safe.
@@ -149,5 +159,13 @@ namespace http
         std::condition_variable condition_var;
         /**True if this client is exiting, and that threads should exit.*/
         std::atomic<bool> exiting;
+        /**Current rate limit allowance.*/
+        std::atomic<int> rate_limit;
+        /**Time of last rate limit allocation.*/
+        std::chrono::seconds rate_limit_time;
+        /**Mutex to control resetting rate_limit and rate_limit_time.*/
+        std::mutex rate_limit_mutex;
+        /**Used by connections to block if needed to avoid exceeding the rate limit.*/
+        void rate_limit_wait();
     };
 }

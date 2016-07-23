@@ -8,6 +8,7 @@ namespace http
     AsyncClient::AsyncClient(const AsyncClientParams & params)
         : params(params)
         , mutex(), threads(), request_queue(), condition_var(), exiting(false)
+        , rate_limit(params.rate_limit), rate_limit_time(time(nullptr))
     {
         start();
     }
@@ -52,6 +53,35 @@ namespace http
             thread.wait_for_exit();
         }
         threads.clear();
+    }
+
+    void AsyncClient::rate_limit_wait()
+    {
+        if (params.rate_limit <= 0) return; //no limit
+
+        //atomic decrement, no need to lock if not managing the reset
+        if (--rate_limit >= 0) return;
+        //only one thread actively waits to reset the count, the others will block on the mutex and
+        //then continue using this second int decrement
+        std::unique_lock<std::mutex> lock(rate_limit_mutex);
+        if (--rate_limit >= 0) return;
+
+
+        //Make the thread sleep until the second after the previous allowance timestamp
+        using std::chrono::steady_clock;
+        using std::chrono::seconds;
+        auto now = std::chrono::duration_cast<seconds>(steady_clock::now().time_since_epoch());
+
+        rate_limit_time += seconds(1);
+        if (rate_limit_time < now)
+        {   // More than a second passed since the last allowance anyway
+            rate_limit_time = now;
+        }
+        else
+        {   //Wait for reset second
+            std::this_thread::sleep_until(steady_clock::time_point(rate_limit_time));
+        }
+        rate_limit = params.rate_limit;
     }
 
     AsyncClient::Thread::Thread(AsyncClient * client)
