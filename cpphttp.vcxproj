@@ -113,6 +113,7 @@
     <ClInclude Include="include\http\core\Parser.hpp" />
     <ClInclude Include="include\http\core\ParserUtils.hpp" />
     <ClInclude Include="include\http\core\Writer.hpp" />
+    <ClInclude Include="include\http\Error.hpp" />
     <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
@@ -126,6 +127,7 @@
     <ClInclude Include="include\http\Request.hpp" />
     <ClInclude Include="include\http\Response.hpp" />
     <ClInclude Include="include\http\server\CoreServer.hpp" />
+    <ClInclude Include="include\http\server\Router.hpp" />
     <ClInclude Include="include\http\Status.hpp" />
     <ClInclude Include="include\http\Time.hpp" />
     <ClInclude Include="include\http\Url.hpp" />
@@ -152,6 +154,7 @@
     <ClCompile Include="source\net\TcpListenSocket.cpp" />
     <ClCompile Include="source\net\TcpSocket.cpp" />
     <ClCompile Include="source\server\CoreServer.cpp" />
+    <ClCompile Include="source\server\Router.cpp" />
     <ClCompile Include="source\Status.cpp" />
     <ClCompile Include="source\Time.cpp" />
     <ClCompile Include="source\Url.cpp" />

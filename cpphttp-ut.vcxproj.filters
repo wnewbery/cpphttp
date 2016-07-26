@@ -13,6 +13,9 @@
     <Filter Include="source\client">
       <UniqueIdentifier>{0b826519-4ca7-4708-890d-17e4a0808f64}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\server">
+      <UniqueIdentifier>{2a03d343-3100-4840-8564-7535751e2820}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests\Main.cpp">
@@ -49,6 +52,9 @@
       <Filter>source\client</Filter>
     </ClCompile>
     <ClCompile Include="tests\TestSocketFactory.cpp" />
+    <ClCompile Include="tests\server\Router.cpp">
+      <Filter>source\server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp">

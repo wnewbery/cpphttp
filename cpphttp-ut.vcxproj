@@ -128,6 +128,7 @@
     <ClCompile Include="tests\Headers.cpp" />
     <ClCompile Include="tests\net\TcpSocket.cpp" />
     <ClCompile Include="tests\net\TlsSocket.cpp" />
+    <ClCompile Include="tests\server\Router.cpp" />
     <ClCompile Include="tests\TestSocketFactory.cpp" />
     <ClCompile Include="tests\Time.cpp" />
     <ClCompile Include="tests\Main.cpp" />
