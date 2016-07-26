@@ -19,4 +19,11 @@ namespace http
          */
         virtual std::unique_ptr<Socket> connect(const std::string &host, uint16_t port, bool tls)=0;
     };
+
+    /**Factory using TcpSocket and TlsSocket.*/
+    class DefaultSocketFactory : public SocketFactory
+    {
+    public:
+        virtual std::unique_ptr<Socket> connect(const std::string &host, uint16_t port, bool tls)override;
+    };
 }

@@ -170,5 +170,8 @@
     <ClCompile Include="source\server\Router.cpp">
       <Filter>source\server</Filter>
     </ClCompile>
+    <ClCompile Include="source\client\SocketFactory.cpp">
+      <Filter>source\client</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

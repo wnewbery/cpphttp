@@ -138,6 +138,7 @@
     <ClCompile Include="source\client\AsyncClient.cpp" />
     <ClCompile Include="source\client\Client.cpp" />
     <ClCompile Include="source\client\ClientConnection.cpp" />
+    <ClCompile Include="source\client\SocketFactory.cpp" />
     <ClCompile Include="source\core\Parser.cpp" />
     <ClCompile Include="source\core\ParserUtils.cpp" />
     <ClCompile Include="source\Headers.cpp" />
