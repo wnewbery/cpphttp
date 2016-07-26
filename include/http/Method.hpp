@@ -1,5 +1,8 @@
 #pragma once
 #include <string>
+#ifdef DELETE
+#undef DELETE
+#endif
 namespace http
 {
     enum Method

@@ -1,23 +1,9 @@
 #pragma once
 #include <stdexcept>
+#include "../Error.hpp"
 #include "../Version.hpp"
 namespace http
 {
-    /**@brief Errors while parsing HTTP messages.
-     * If status_code is non-zero, it is a suggested HTTP error status code to send if parsing a
-     * request, such as an overlong URI or unsupported method.
-     */
-    class ParserError : public std::runtime_error
-    {
-    public:
-        ParserError(const std::string &msg, int status_code = 0)
-            : std::runtime_error(msg), _status_code(status_code)
-        {}
-
-        int status_code()const { return _status_code; }
-    protected:
-        int _status_code;
-    };
 
     /**Low level HTTP parser components.
      * Mostly a set of functions to parse each specific part of the HTTP protocol.

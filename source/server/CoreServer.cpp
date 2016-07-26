@@ -4,6 +4,7 @@
 #include "core/Writer.hpp"
 #include "net/TcpListenSocket.hpp"
 #include "net/TcpSocket.hpp"
+#include "Error.hpp"
 
 namespace http
 {
@@ -18,7 +19,7 @@ namespace http
             auto sock = listen_socket.accept();
             
             //new thread
-            threads.emplace_back(this, std::move(sock));
+            threads.emplace_back(this, std::unique_ptr<Socket>(new TcpSocket(std::move(sock))));
             //clear out any dead entries
             for (auto thread = threads.begin(); thread != threads.end(); )
             {
@@ -46,7 +47,7 @@ namespace http
             main2();
             running = false;
         }
-        catch (const std::exception &e)
+        catch (const std::exception &)
         {
             running = false;
         }
@@ -55,15 +56,63 @@ namespace http
     void CoreServer::Thread::main2()
     {
         char buffer[RequestParser::LINE_SIZE];
+        size_t buffer_len = 0;
         RequestParser parser;
         while (true)
         {
-            //parse
-            parser.reset();
-            size_t buffer_len = 0;
-            while (!parser.is_completed())
+            Response resp;
+            try
             {
+                //parse
+                parser.reset();
+                while (!parser.is_completed())
+                {
+                    auto recved = socket->recv(buffer + buffer_len, sizeof(buffer) - buffer_len);
+                    if (!recved) throw std::runtime_error("Unexpected client disconnect");
+                    buffer_len += recved;
+
+                    auto end = parser.read(buffer, buffer + buffer_len);
+                    memmove(buffer, end, buffer_len - (end - buffer));
+                }
+                //Handle
+                Request req =
+                {
+                    method_from_string(parser.method()),
+                    parser.uri(),
+                    Url::parse_request(parser.uri()),
+                    parser.headers(),
+                    parser.body()
+                };
+
+                resp = server->handle_request(req);
             }
+            catch (const ParserError &err)
+            {
+                int status = err.status_code();
+                if (status <= 0) status = 400;
+                resp.status.code = (StatusCode)status;
+                resp.body = err.what();
+                resp.headers.add("Content-Type", "text/plain");
+            }
+            catch (const ErrorResponse &err)
+            {
+                resp.status.code = (StatusCode)err.status_code();
+                resp.body = err.what();
+                resp.headers.add("Content-Type", "text/plain");
+            }
+            catch (const std::exception &err)
+            {
+                resp.status.code = SC_INTERNAL_SERVER_ERROR;
+                resp.body = err.what();
+                resp.headers.add("Content-Type", "text/plain");
+            }
+            if (resp.status.msg.empty())
+            {
+                resp.status.msg = default_status_msg(resp.status.code);
+            }
+
+            //Send response
+            send_response(socket.get(), resp);
         }
     }
 }

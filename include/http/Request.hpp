@@ -20,6 +20,6 @@ namespace http
         Url url;
 
         Headers headers;
-        std::vector<uint8_t> body;
+        std::string body;
     };
 }
