@@ -20,5 +20,9 @@ namespace http
             status.code = sc;
             status.msg = default_status_msg(sc);
         }
+        void status_code(int sc)
+        {
+            status_code((StatusCode)sc);
+        }
     };
 }

@@ -15,7 +15,7 @@ namespace http
         connect(host, port);
     }
     TcpSocket::TcpSocket(SOCKET socket, const sockaddr *address)
-        : socket(socket), _host(), _port(0)
+        : socket(INVALID_SOCKET), _host(), _port(0)
     {
         set_socket(socket, address);
     }

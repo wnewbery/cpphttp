@@ -31,6 +31,13 @@ namespace http
         int _status_code;
     };
 
+    class BadRequest : public ErrorResponse
+    {
+    public:
+        BadRequest(const std::string &message)
+            : ErrorResponse(message, 400)
+        {}
+    };
     class NotFound : public ErrorResponse
     {
     public:

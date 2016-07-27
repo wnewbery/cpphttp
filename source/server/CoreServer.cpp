@@ -68,11 +68,16 @@ namespace http
                 while (!parser.is_completed())
                 {
                     auto recved = socket->recv(buffer + buffer_len, sizeof(buffer) - buffer_len);
-                    if (!recved) throw std::runtime_error("Unexpected client disconnect");
+                    if (!recved)
+                    {
+                        if (parser.state() == BaseParser::START) return;
+                        else throw std::runtime_error("Unexpected client disconnect");
+                    }
                     buffer_len += recved;
 
                     auto end = parser.read(buffer, buffer + buffer_len);
-                    memmove(buffer, end, buffer_len - (end - buffer));
+                    buffer_len -= end - buffer;
+                    memmove(buffer, end, buffer_len);
                 }
                 //Handle
                 Request req =
