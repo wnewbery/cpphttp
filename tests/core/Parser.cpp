@@ -106,7 +106,58 @@ BOOST_AUTO_TEST_CASE(test_request_parser_post_split)
     BOOST_CHECK_EQUAL("0123456789", parser.body());
 }
 
-BOOST_AUTO_TEST_CASE(test_trailers)
+BOOST_AUTO_TEST_CASE(test_chunked)
+{
+    RequestParser parser;
+    auto read_str = [&parser](std::string str) -> std::string
+    {
+        auto p = parser.read(str.c_str(), str.c_str() + str.size());
+        BOOST_REQUIRE(p >= str.c_str());
+        BOOST_REQUIRE(p <= str.c_str() + str.size());
+        return{ p, str.c_str() + str.size() };
+    };
+
+    BOOST_CHECK_EQUAL("", read_str(
+        "POST /test HTTP/1.1\r\n"
+        "Trailer: Expires\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"));
+    BOOST_CHECK_EQUAL(RequestParser::BODY_CHUNK_LEN, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("5\r\n"));
+    BOOST_CHECK_EQUAL(RequestParser::BODY_CHUNK, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("0123"));
+    BOOST_CHECK_EQUAL(RequestParser::BODY_CHUNK, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("4"));
+    BOOST_CHECK_EQUAL(RequestParser::BODY_CHUNK_TERMINATOR, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("\r\n"));
+    BOOST_CHECK_EQUAL(RequestParser::BODY_CHUNK_LEN, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("0\r\n"));
+    BOOST_CHECK_EQUAL(RequestParser::TRAILER_HEADERS, parser.state());
+
+    BOOST_CHECK_EQUAL("", read_str("\r\n"));
+    BOOST_CHECK(parser.is_completed());
+    BOOST_CHECK_EQUAL(5, parser.content_length());
+    BOOST_CHECK_EQUAL("01234", parser.body());
+
+    parser.reset();
+    BOOST_CHECK_EQUAL("", read_str(
+        "POST /test HTTP/1.1\r\n"
+        "Trailer: Expires\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "5\r\n01234\r\n"
+        "0\r\n"
+        "\r\n"));
+    BOOST_CHECK_EQUAL(5, parser.content_length());
+    BOOST_CHECK_EQUAL("01234", parser.body());
+}
+
+BOOST_AUTO_TEST_CASE(test_chunked_trailers)
 {
     RequestParser parser;
     auto read_str = [&parser](std::string str) -> std::string

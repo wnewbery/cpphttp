@@ -122,7 +122,7 @@ namespace http
             return begin;
         }
 
-        while (true)
+        while (begin < end)
         {
             if (_state == BODY_CHUNK)
             {
@@ -161,7 +161,7 @@ namespace http
             }
             else if (_state == BODY_CHUNK_TERMINATOR)
             {
-                if (begin + 2 >= end) return begin;
+                if (begin + 2 > end) return begin;
                 if (begin[0] == '\r' && begin[1] == '\n')
                 {
                     begin += 2;
