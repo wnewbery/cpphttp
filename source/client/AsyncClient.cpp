@@ -126,6 +126,10 @@ namespace http
         bool called_complete = false;
         try
         {
+            for (auto &header : client->params.default_headers)
+            {
+                request->headers.set_default(header.first, header.second);
+            }
             //Send
             bool sent = false;
             if (conn.is_connected())
