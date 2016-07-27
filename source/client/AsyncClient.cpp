@@ -5,11 +5,13 @@
 #include <cassert>
 namespace http
 {
-    AsyncClient::AsyncClient(const AsyncClientParams & params)
-        : params(params)
+    AsyncClient::AsyncClient(const AsyncClientParams & _params)
+        : params(_params)
         , mutex(), threads(), request_queue(), condition_var(), exiting(false)
         , rate_limit(params.rate_limit), rate_limit_time(time(nullptr))
     {
+        params.default_headers.set_default("Host", params.host + ":" + std::to_string(params.port));
+
         start();
     }
 

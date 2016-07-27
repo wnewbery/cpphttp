@@ -145,7 +145,7 @@ namespace http
             ClientConnection conn;
         };
         /**User-defined parameters used to process requests.*/
-        const AsyncClientParams params;
+        AsyncClientParams params;
 
         /**Mutex protects shared state.
          * @todo Use of a lockless queue for request_queue would remove most of this requirement.
