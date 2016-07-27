@@ -163,6 +163,7 @@ BOOST_AUTO_TEST_CASE(test_read_header_value)
     BOOST_CHECK_EQUAL(" ", f("value "));
     BOOST_CHECK_EQUAL("\t", f("value\t"));
     BOOST_CHECK_EQUAL("   \t ", f("value   \t "));
+    BOOST_CHECK_EQUAL("   \t ", f("hello world   \t "));
 
     BOOST_CHECK_THROW(f("invalid\nvalue"), ParserError);
     BOOST_CHECK_THROW(f(""), ParserError);

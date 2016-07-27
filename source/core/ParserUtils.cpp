@@ -173,12 +173,14 @@ namespace http
         const char *read_header_value(const char *begin, const char *end)
         {
             if (begin == end || is_ows(*begin)) throw ParserError("Header values can not be empty");
+            auto last_non_ws = begin;
             for (auto p = begin + 1; p < end; ++p)
             {
-                if (is_ows(*p)) return p;
-                else if (!is_field_vchar(*p)) throw ParserError("Invalid octet in header field value");
+                if (is_ows(*p)) continue;
+                else if (is_field_vchar(*p)) last_non_ws = p;
+                else throw ParserError("Invalid octet in header field value");
             }
-            return end;
+            return last_non_ws + 1;
         }
 
         const char *skip_ows(const char *begin, const char *end)
