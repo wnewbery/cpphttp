@@ -152,10 +152,10 @@ namespace http
                     memcpy(bytes + len_out, decrypt_p, out_cpy_len);
                     len_out += out_cpy_len;
 
-                    if (out_cpy_len < buffer_data->cbBuffer)
+                    if (out_cpy_len < decrypt_len)
                     {   // Had more data than can output, store for later
                         recv_decrypted_buffer.insert(recv_decrypted_buffer.end(),
-                            decrypt_p + out_cpy_len, decrypt_p + (decrypt_len - out_cpy_len));
+                            decrypt_p + out_cpy_len, decrypt_p + decrypt_len);
                     }
                 }
 
