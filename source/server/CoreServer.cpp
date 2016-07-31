@@ -5,6 +5,7 @@
 #include "net/TcpListenSocket.hpp"
 #include "net/TcpSocket.hpp"
 #include "Error.hpp"
+#include <cstring>
 
 namespace http
 {
