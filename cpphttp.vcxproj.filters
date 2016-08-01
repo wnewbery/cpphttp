@@ -114,6 +114,9 @@
     <ClInclude Include="include\http\Error.hpp">
       <Filter>include\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\util\Thread.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">

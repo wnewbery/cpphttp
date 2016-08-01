@@ -4,6 +4,7 @@
 #include "core/Writer.hpp"
 #include "net/TcpListenSocket.hpp"
 #include "net/TcpSocket.hpp"
+#include "util/Thread.hpp"
 #include "Error.hpp"
 #include <cstring>
 
@@ -45,6 +46,7 @@ namespace http
     {
         try
         {
+            set_thread_name("http::CoreServer worker");
             main2();
             running = false;
         }
@@ -62,6 +64,7 @@ namespace http
         while (true)
         {
             Response resp;
+            resp.body.clear();
             try
             {
                 //parse

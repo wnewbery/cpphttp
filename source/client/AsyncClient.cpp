@@ -2,6 +2,7 @@
 #include "client/SocketFactory.hpp"
 #include "net/Net.hpp"
 #include "net/Socket.hpp"
+#include "util/Thread.hpp"
 #include <cassert>
 namespace http
 {
@@ -98,6 +99,7 @@ namespace http
 
     void AsyncClient::Thread::main()
     {
+        set_thread_name("http::AsyncClient");
         while (true)
         {
             AsyncRequest *request;
