@@ -29,7 +29,7 @@ namespace http
     }
 }
 #else
-#include <pthread>
+#include <pthread.h>
 namespace http
 {
     inline void set_thread_name(const std::string &str)

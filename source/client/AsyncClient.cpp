@@ -125,6 +125,7 @@ namespace http
 
     void AsyncClient::Thread::process_request(AsyncRequest * request)
     {
+        bool complete = false;
         bool called_complete = false;
         try
         {
@@ -156,6 +157,7 @@ namespace http
             request->response = conn.recv_response();
 
             //Complete
+            complete = true;
             if (request->on_completion)
             {
                 called_complete = true;
@@ -165,6 +167,10 @@ namespace http
         }
         catch (const std::exception &)
         {
+            if (!complete) //Some sort of connection or protocol error, dont try to reuse
+            {
+                conn.reset(nullptr);
+            }
             if (!called_complete && request->on_exception)
             {
                 try
