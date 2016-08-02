@@ -31,6 +31,12 @@
     <Filter Include="source\server">
       <UniqueIdentifier>{0b78ea69-9fa7-40dc-a29c-62125dcfcabb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\headers">
+      <UniqueIdentifier>{12b15611-a106-460e-96db-92793705e84b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\headers">
+      <UniqueIdentifier>{c25e26ac-de73-421b-af90-738ca134793f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http\Time.hpp">
@@ -117,6 +123,9 @@
     <ClInclude Include="include\http\util\Thread.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\headers\Accept.hpp">
+      <Filter>include\headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -175,6 +184,9 @@
     </ClCompile>
     <ClCompile Include="source\client\SocketFactory.cpp">
       <Filter>source\client</Filter>
+    </ClCompile>
+    <ClCompile Include="source\headers\Accept.cpp">
+      <Filter>source\headers</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

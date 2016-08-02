@@ -119,6 +119,7 @@
     <ClInclude Include="include\http\core\Writer.hpp" />
     <ClInclude Include="include\http\Error.hpp" />
     <ClInclude Include="include\http\Headers.hpp" />
+    <ClInclude Include="include\http\headers\Accept.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
     <ClInclude Include="include\http\net\Net.hpp" />
@@ -147,6 +148,7 @@
     <ClCompile Include="source\core\Parser.cpp" />
     <ClCompile Include="source\core\ParserUtils.cpp" />
     <ClCompile Include="source\Headers.cpp" />
+    <ClCompile Include="source\headers\Accept.cpp" />
     <ClCompile Include="source\Method.cpp" />
     <ClCompile Include="source\net\Net.cpp" />
     <ClCompile Include="source\net\OpenSslSocket.cpp">

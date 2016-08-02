@@ -16,6 +16,9 @@
     <Filter Include="source\server">
       <UniqueIdentifier>{2a03d343-3100-4840-8564-7535751e2820}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\headers">
+      <UniqueIdentifier>{3e1f61f6-15e1-4ee8-a9f4-af36f22a9937}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests\Main.cpp">
@@ -54,6 +57,9 @@
     <ClCompile Include="tests\TestSocketFactory.cpp" />
     <ClCompile Include="tests\server\Router.cpp">
       <Filter>source\server</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\headers\Accept.cpp">
+      <Filter>source\headers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -7,11 +7,46 @@ namespace http
 
     /**Low level HTTP parser components.
      * Mostly a set of functions to parse each specific part of the HTTP protocol.
+     *
+     * RFC 7230 Appendix B specifies most of the lowest level components such as OWS, Token, etc.
      */
     namespace parser
     {
+        /**@return c >= '0' && c <= '9'*/
+        inline bool is_digit(char c)
+        {
+            return c >= '0' && c <= '9';
+        }
+
+        /**@return The first occurance of chr, or end.*/
+        inline const char *find_chr(const char *begin, const char *end, char chr)
+        {
+            while (begin < end && *begin != chr) ++begin;
+            return begin;
+        }
         /**Finds the end of the line (CRLF), or null if the newline is not found.*/
         const char *find_newline(const char *begin, const char *end);
+
+        /**Read until end of token.*/
+        const char *read_token(const char *begin, const char *end);
+       
+        /**Read a quoted string. This has an output parameter due to the need to transfor
+         * escape sequences.
+         */
+        const char *read_qstring(const char *begin, const char *end, std::string *out);
+
+        /**Reads a token or quoted string (read_token, read_qstring)*/
+        const char *read_token_or_qstring(const char *begin, const char *end, std::string *out);
+
+        /**Reads the list seperator as defined by RFC7230 7.
+         * Note: Using this alone is slightly more strict than RFC7230 says, in that leading
+         * commas will be considered an error. An additional function could be used if a client
+         * still exists in practice that generates such malformed lists.
+         * @return Start or next value, or end if a valid list end is reached.
+         * @throws ParserError If the seperator is syntactically invalid.
+         */
+        const char *read_list_sep(const char *begin, const char *end);
+
         /**Reads the HTTP method from the request line.
          * @return The end of the method (SP).
          * @throws ParserError An invalid octet, or end is encountered.

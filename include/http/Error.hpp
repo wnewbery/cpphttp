@@ -1,5 +1,7 @@
 #pragma once
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace http
 {
@@ -31,25 +33,47 @@ namespace http
         int _status_code;
     };
 
-    class BadRequest : public ErrorResponse
+    /**4xx error*/
+    class ClientErrorResponse : public ErrorResponse
+    {
+    public:
+        using ErrorResponse::ErrorResponse;
+    };
+
+    /**400 Bad Request*/
+    class BadRequest : public ClientErrorResponse
     {
     public:
         BadRequest(const std::string &message)
-            : ErrorResponse(message, 400)
+            : ClientErrorResponse(message, 400)
         {}
     };
-    class NotFound : public ErrorResponse
+    /**404 Not Found*/
+    class NotFound : public ClientErrorResponse
     {
     public:
         NotFound(const std::string &path)
-            : ErrorResponse("Not Found " + path, 404)
+            : ClientErrorResponse("Not Found " + path, 404)
         {}
     };
-    class MethodNotAllowed : public ErrorResponse
+    /**405 Method Not Allowed*/
+    class MethodNotAllowed : public ClientErrorResponse
     {
     public:
         MethodNotAllowed(const std::string &method, const std::string &path)
-            : ErrorResponse(method + " not allowed for " + path, 405)
+            : ClientErrorResponse(method + " not allowed for " + path, 405)
         {}
+    };
+    /**406 Not Acceptable*/
+    class NotAcceptable : public ClientErrorResponse
+    {
+    public:
+        NotAcceptable(const std::vector<std::string> &accepts)
+            : ClientErrorResponse("No acceptable content type", 406)
+            , _accepts(accepts)
+        {}
+        const std::vector<std::string>& accepts()const { return _accepts; }
+    private:
+        std::vector<std::string> _accepts;
     };
 }

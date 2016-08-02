@@ -5,10 +5,6 @@ namespace http
     {
         namespace
         {
-            bool is_digit(char c)
-            {
-                return c >= '0' && c <= '9';
-            }
             bool is_alpha(char c)
             {
                 return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
@@ -63,14 +59,14 @@ namespace http
             {
                 return c == ' ' || c == '\t';
             }
-
-            /**Read until end of token, does not validate if the end octet is allowed or not.*/
-            const char *read_token(const char *begin, const char *end)
+            bool is_qdtext(char c)
             {
-                auto p = begin;
-                while (p < end && is_token_chr(*p)) ++p;
-                return p;
+                return c == '\t' || c == ' ' || c == '!' ||
+                    (c >= 0x23 && c <= 0x5B) ||
+                    (c >= 0x5D && c <= 0x7E) ||
+                    is_obs_text(c);
             }
+
             /**Read a decimal number.*/
             const char *read_decimal(const char *begin, const char *end, int *out)
             {
@@ -95,6 +91,72 @@ namespace http
                 }
             }
             return nullptr;
+        }
+
+        const char *read_token(const char *begin, const char *end)
+        {
+            auto p = begin;
+            while (p < end && is_token_chr(*p)) ++p;
+            if (p == begin) throw ParserError("Expected token");
+            return p;
+        }
+
+        const char *read_list_sep(const char *begin, const char *end)
+        {
+            // 1#element => *( "," OWS ) element *( OWS "," [ OWS element ]) a
+            auto p = begin;
+            p = skip_ows(p, end);
+            if (p == end) return end;
+            if (*p != ',') throw ParserError("Expected ',' in comma-delimited list");
+
+            while (true) //skip empty elements
+            {
+                p = skip_ows(p + 1, end);
+
+                if (p == end) return end;
+                else if (*p == ',') continue;
+                else return p;
+            }
+        }
+
+        const char *read_qstring(const char *begin, const char *end, std::string *out)
+        {
+            if (begin == end || *begin != '"') throw ParserError("Expected \"");
+            out->clear();
+            auto p = begin + 1;
+            while (p < end)
+            {
+                if (*p == '"') return p + 1; //end delimiter
+                else if (*p == '\\')
+                {
+                    if (p + 1 == end) throw ParserError("Unexpected end in quoted-string");
+                    if (*p == '\t') *out += '\t';
+                    else if (*p == ' ') *out += ' ';
+                    else if (is_vchar(*p)) *out += *p;
+                    else if (is_obs_text(*p)) *out += *p;
+                    else throw ParserError("Invalid quoted-pair escape in quoted-string");
+                    p += 2;
+                }
+                else if (is_qdtext(*p))
+                {
+                    *out += *p;
+                    ++p;
+                }
+                else throw ParserError("Invalid octet in quoted-string");
+            }
+            throw ParserError("Expected \" to end quoted-string");
+        }
+
+        const char *read_token_or_qstring(const char *begin, const char *end, std::string *out)
+        {
+            if (begin == end) throw ParserError("Unexpected end, expected token or quoted-string");
+            if (*begin == '"') return read_qstring(begin, end, out);
+            else
+            {
+                auto p = read_token(begin, end);
+                out->assign(begin, p);
+                return p;
+            }
         }
 
         const char *read_method(const char *begin, const char *end)
