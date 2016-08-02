@@ -15,7 +15,7 @@ namespace http
     //http::init_net, Net.cpp
     extern SSL_CTX* openssl_ctx;
     extern const SSL_METHOD *openssl_method;
-    
+
     std::string openssl_err_str(SSL *ssl, int error)
     {
         auto e2 = errno;
@@ -43,8 +43,12 @@ namespace http
     void OpenSslSocket::connect(const std::string &host, uint16_t port)
     {
         tcp.connect(host, port);
-        
+
         ssl = SSL_new(openssl_ctx);
+
+        //Currently only supporting blocking sockets, so dont care about renegotiation details
+        SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+
         SSL_set_fd(ssl, tcp.get_socket());
         auto err = SSL_connect(ssl);
         if (err < 0) throw OpenSslSocketError(ssl, err);
