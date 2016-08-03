@@ -33,7 +33,11 @@ namespace http
         {
             auto recv = socket->recv(buffer + buffer_len, buffer_capacity - buffer_len);
             if (recv == 0)
-                throw std::runtime_error("Server disconnected before response was complete");
+            {
+                if (parser.state() == ResponseParser::START)
+                    throw std::runtime_error("Server disconnected before response was sent");
+                else throw std::runtime_error("Server disconnected before response was complete");
+            }
             buffer_len += recv;
 
             auto end = buffer + buffer_len;
