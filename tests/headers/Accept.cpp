@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(parse_single)
     type = accept.accepts().at(0);
     BOOST_CHECK_EQUAL(1, type.quality);
 
-    //media type parameters
+    //media type parameters (currently ignored)
     BOOST_REQUIRE_NO_THROW(accept = Accept("*/*;charset=utf-8;q=1"));
     type = accept.accepts().at(0);
     BOOST_CHECK_EQUAL(1, type.quality);
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(parse_single)
     type = accept.accepts().at(0);
     BOOST_CHECK_EQUAL(1, type.quality);
 
-    //accept-ext parameters
+    //accept-ext parameters (currently ignored)
     BOOST_REQUIRE_NO_THROW(accept = Accept("*/*;q=1;ext=5"));
     type = accept.accepts().at(0);
     BOOST_CHECK_EQUAL(1, type.quality);
@@ -81,7 +81,6 @@ BOOST_AUTO_TEST_CASE(parse_list)
 {
     Accept accept;
 
-    //media-range
     BOOST_REQUIRE_NO_THROW(accept = Accept("*/*,,text/html , application/json,"));
     BOOST_REQUIRE_EQUAL(3, accept.accepts().size());
     BOOST_CHECK_EQUAL("*", accept.accepts()[0].type);
@@ -159,6 +158,8 @@ BOOST_AUTO_TEST_CASE(preferred)
     BOOST_CHECK_EQUAL("text/html", Accept("*/*, text/html").preferred({ "text/plain", "text/html" }));
 
     BOOST_CHECK_EQUAL("image/png", Accept("*/*, image/*").preferred({ "text/plain", "image/png" }));
+
+    BOOST_CHECK_EQUAL("text/plain", Accept("text/html, */*;q=0.5").preferred({ "text/plain", "image/png" }));
 
     BOOST_CHECK_EQUAL("text/plain", Accept("text/*, image/*").preferred({ "text/plain", "text/html", "image/png" }));
     BOOST_CHECK_EQUAL("image/png", Accept("text/*;q=0.5, image/*").preferred({ "text/plain", "text/html", "image/png" }));

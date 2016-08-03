@@ -6,6 +6,22 @@
 #include <cassert>
 namespace http
 {
+    AsyncRequest::~AsyncRequest()
+    {
+        if (auto client = detail.client.load())
+        {
+            //TODO: Ensure client can not get invalidated while still in this block
+            assert(detail.future.valid());
+            client->abort(this);
+            detail.future.wait();
+            assert(!detail.client.load());
+        }
+        else
+        {
+            assert(!detail.future.valid());
+        }
+    }
+
     AsyncClient::AsyncClient(const AsyncClientParams & _params)
         : params(_params)
         , mutex(), threads(), request_queue(), condition_var(), exiting(false)
@@ -21,17 +37,30 @@ namespace http
         exit();
     }
 
-    std::future<Response*>& AsyncClient::make_request(AsyncRequest *request)
+    std::future<Response*>& AsyncClient::queue(AsyncRequest *request)
     {
-        request->promise = std::promise<Response*>();
-        request->future = request->promise.get_future();
-        request->response.body.clear();
-        request->response.headers.clear();
+        request->detail.future = request->detail.promise.get_future();
+        request->detail.client = this;
 
         Lock lock(mutex);
-        request_queue.push(request);
+        request_queue.push_back(request);
         condition_var.notify_one();
-        return request->future;
+        return request->detail.future;
+    }
+
+    void AsyncClient::abort(AsyncRequest *request)
+    {
+        Lock lock(mutex);
+        for (auto it = request_queue.begin(); it != request_queue.end(); ++it)
+        {
+            if (*it == request)
+            {
+                request_queue.erase(it);
+                request->detail.promise.set_value(nullptr);
+                request->detail.client = nullptr;
+                return;
+            }
+        }
     }
 
     void AsyncClient::start()
@@ -56,6 +85,15 @@ namespace http
             thread.wait_for_exit();
         }
         threads.clear();
+        {
+            Lock lock(mutex);
+            for (auto &req : request_queue)
+            {
+                req->detail.promise.set_value(nullptr);
+                req->detail.client = nullptr;
+            }
+            request_queue.clear();
+        }
     }
 
     void AsyncClient::rate_limit_wait()
@@ -114,7 +152,7 @@ namespace http
                 else
                 {
                     request = client->request_queue.front();
-                    client->request_queue.pop();
+                    client->request_queue.pop_front();
                     break;
                 }
             }
@@ -154,19 +192,21 @@ namespace http
             }
 
             //Receive
-            request->response = conn.recv_response();
+            request->detail.response = conn.recv_response();
 
             //Complete
             complete = true;
+            request->detail.client = nullptr;
             if (request->on_completion)
             {
                 called_complete = true;
-                request->on_completion(request, request->response);
+                request->on_completion(request, request->detail.response);
             }
-            request->promise.set_value(&request->response);
+            request->detail.promise.set_value(&request->detail.response);
         }
         catch (const std::exception &)
         {
+            request->detail.client = nullptr;
             if (!complete) //Some sort of connection or protocol error, dont try to reuse
             {
                 conn.reset(nullptr);
@@ -180,7 +220,7 @@ namespace http
                 catch (const std::exception &)
                 {}
             }
-            request->promise.set_exception(std::current_exception());
+            request->detail.promise.set_exception(std::current_exception());
         }
     }
 

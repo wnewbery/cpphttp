@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(single)
     req.method = GET;
     req.raw_url = "/index.html";
 
-    auto response = client.make_request(&req).get();
+    auto response = client.queue(&req).get();
     BOOST_CHECK_EQUAL(200, response->status.code);
 }
 
@@ -82,13 +82,15 @@ BOOST_AUTO_TEST_CASE(sequential)
     req.method = GET;
     req.raw_url = "/index.html";
 
-    auto response = client.make_request(&req).get();
+    auto response = client.queue(&req).get();
+    BOOST_CHECK_EQUAL(200, response->status.code);
+   
+    req.reset();
+    response = client.queue(&req).get();
     BOOST_CHECK_EQUAL(200, response->status.code);
 
-    response = client.make_request(&req).get();
-    BOOST_CHECK_EQUAL(200, response->status.code);
-
-    response = client.make_request(&req).get();
+    req.reset();
+    response = client.queue(&req).get();
     BOOST_CHECK_EQUAL(200, response->status.code);
 }
 
@@ -122,7 +124,7 @@ BOOST_AUTO_TEST_CASE(callback)
         done = true;
     };
 
-    client.make_request(&req);
+    client.queue(&req);
     auto response = req.wait();
     BOOST_CHECK_EQUAL(200, response->status.code);
     BOOST_CHECK(done);
@@ -166,7 +168,7 @@ BOOST_AUTO_TEST_CASE(async_error)
         }
     };
 
-    client.make_request(&req);
+    client.queue(&req);
     BOOST_CHECK_THROW(req.wait(), ConnectionError);
     BOOST_CHECK(done);
 }
@@ -225,12 +227,12 @@ BOOST_AUTO_TEST_CASE(parallel)
     auto e = req();
     auto f = req();
 
-    client.make_request(&a);
-    client.make_request(&b);
-    client.make_request(&c);
-    client.make_request(&d);
-    client.make_request(&e);
-    client.make_request(&f);
+    client.queue(&a);
+    client.queue(&b);
+    client.queue(&c);
+    client.queue(&d);
+    client.queue(&e);
+    client.queue(&f);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     BOOST_CHECK_EQUAL(4U, socket_factory.connect_count.load());

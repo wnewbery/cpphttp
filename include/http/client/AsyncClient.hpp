@@ -4,7 +4,7 @@
 #include <functional>
 #include <thread>
 #include <future>
-#include <queue>
+#include <deque>
 #include <list>
 #include <chrono>
 #include "../Request.hpp"
@@ -12,6 +12,7 @@
 #include "../Headers.hpp"
 namespace http
 {
+    class AsyncClient;
     class AsyncRequest;
     /**Request that can be processed asyncronously.
      * This object must remain valid until the async client is finished with it.
@@ -47,24 +48,71 @@ namespace http
          */
         std::function<void(AsyncRequest *request)> on_exception;
 
+        AsyncRequest() {}
+        AsyncRequest(const AsyncRequest&) = delete;
+        AsyncRequest& operator = (const AsyncRequest&) = delete;
+        AsyncRequest(AsyncRequest&&) = default;
+        AsyncRequest& operator = (AsyncRequest&&) = default;
+
+        ~AsyncRequest();
+
         /**Wait for the promise. The returned promise is valid as long as this request object is.
          * The implementation uses std::future, and exceptions in the async client processing this
          * request will be forwarded and rethrown.
          */
         Response *wait()
         {
-            return future.get();
+            return detail.future.get();
+        }
+        /**Reset so ready to be re-used.
+         * The Request fields, on_completion and on_exception are left unaltered.
+         * 
+         * Not thread safe.
+         */
+        void reset()
+        {
+            detail.promise = std::promise<Response*>();
+            detail.response.body.clear();
+            detail.response.headers.clear();
         }
 
-        /**Promise that can recieve the response syncronously.*/
-        std::promise<Response*> promise;
-        std::future<Response*> future;
+        /**Implementation details for use by AsyncClient.*/
+        struct Detail
+        {
+            /**Promise that can recieve the response syncronously.*/
+            std::promise<Response*> promise;
+            /**std::future for promise.*/
+            std::future<Response*> future;
+            /**The client performing this request.*/
+            std::atomic<AsyncClient*> client;
 
-        /**Storage for the response, intended for the async implementations benefit.
-         * Client should get the response from the callback or future, and this field is not
-         * defined to be valid at any point in time.
-         */
-        Response response;
+            /**Storage for the response, intended for the async implementations benefit.
+             * Client should get the response from the callback or future, and this field is not
+             * defined to be valid at any point in time.
+             */
+            Response response;
+
+            Detail() : promise(), future(), client(nullptr), response() {}
+
+            Detail(const Detail&) = delete;
+            Detail& operator = (const Detail&) = delete;
+
+            Detail(Detail &&mv)
+                : promise(std::move(mv.promise))
+                , future(std::move(mv.future))
+                , client(mv.client.load())
+            {
+                mv.client = nullptr;
+            }
+            Detail& operator = (Detail &&mv)
+            {
+                promise = std::move(mv.promise);
+                future = std::move(mv.future);
+                client = mv.client.load();
+                mv.client = nullptr;
+                return *this;
+            }
+        }detail;
     };
     /**Params for AsyncClient.*/
     struct AsyncClientParams
@@ -119,7 +167,9 @@ namespace http
          * @return The std::future for the request, allthough its use is not mandatory if the
          * request included callbacks.
          */
-        std::future<Response*>& make_request(AsyncRequest *request);
+        std::future<Response*>& queue(AsyncRequest *request);
+        /**Abort a pending request.*/
+        void abort(AsyncRequest *request);
         /**Stop processing requests and wait for all internal threads to exit.
          * Any request already being executed will be completed, but future queued ones will not be
          * started, the promise will not be fullfilled, and callbacks will not be invoked.
@@ -154,7 +204,7 @@ namespace http
         /**List of threads.*/
         std::list<Thread> threads;
         /**FI-FO queue of requests to process.*/
-        std::queue<AsyncRequest*> request_queue;
+        std::deque<AsyncRequest*> request_queue;
         /**Signals a change to request_queue or exiting.*/
         std::condition_variable condition_var;
         /**True if this client is exiting, and that threads should exit.*/
