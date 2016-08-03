@@ -16,10 +16,6 @@ namespace http
             detail.future.wait();
             assert(!detail.client.load());
         }
-        else
-        {
-            assert(!detail.future.valid());
-        }
     }
 
     AsyncClient::AsyncClient(const AsyncClientParams & _params)
