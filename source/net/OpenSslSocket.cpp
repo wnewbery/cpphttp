@@ -58,6 +58,10 @@ namespace http
     {
         return tcp.address_str();
     }
+    bool OpenSslSocket::check_recv_disconnect()
+    {
+        return tcp.check_recv_disconnect();
+    }
     void OpenSslSocket::disconnect()
     {
         tcp.disconnect();

@@ -13,6 +13,11 @@ namespace http
         socket = std::move(new_socket);
     }
 
+    bool ClientConnection::is_connected()const
+    {
+        return socket != nullptr && !socket->check_recv_disconnect();
+    }
+
     void ClientConnection::send_request(Request &request)
     {
         assert(socket);

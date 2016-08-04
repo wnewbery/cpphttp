@@ -71,6 +71,10 @@ namespace http
     {
         return tcp.address_str();
     }
+    bool SchannelSocket::check_recv_disconnect()
+    {
+        return tcp.check_recv_disconnect();
+    }
     void SchannelSocket::disconnect()
     {
         DWORD type = SCHANNEL_SHUTDOWN;

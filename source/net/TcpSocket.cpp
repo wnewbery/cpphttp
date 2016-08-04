@@ -126,7 +126,7 @@ namespace http
     {
         if (len > std::numeric_limits<int>::max()) len = std::numeric_limits<int>::max();
         auto ret = ::recv(socket, (char*)buffer, (int)len, 0);
-        if (ret == SOCKET_ERROR)
+        if (ret < 0)
         {
             auto err = last_net_error();
             throw SocketError(err);
@@ -137,11 +137,31 @@ namespace http
     {
         if (len > std::numeric_limits<int>::max()) len = std::numeric_limits<int>::max();
         auto ret = ::send(socket, (const char*)buffer, (int)len, 0);
-        if (ret == SOCKET_ERROR)
+        if (ret < 0)
         {
             auto err = last_net_error();
             throw SocketError(err);
         }
         return (size_t)ret;
+    }
+
+    bool TcpSocket::check_recv_disconnect()
+    {
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(socket, &set);
+        timeval timeout = {0, 0};
+        auto ret = ::select(1, &set, nullptr, nullptr, &timeout);
+        if (ret == 0) return false;
+        else if (ret < 0)
+        {
+            auto err = last_net_error();
+            throw SocketError(err);
+        }
+        assert(ret == 1);
+
+        char buffer[1];
+        if (recv(buffer, sizeof(buffer)) == 0) return true;
+        else throw std::runtime_error("Received unexpected data.");
     }
 }

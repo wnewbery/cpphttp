@@ -20,6 +20,7 @@ namespace http
 
         virtual std::string address_str()const override;
         virtual void disconnect()override;
+        virtual bool check_recv_disconnect()override;
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
     private:

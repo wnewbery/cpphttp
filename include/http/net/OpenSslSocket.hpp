@@ -35,6 +35,7 @@ namespace http
         virtual void disconnect()override;
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
+        virtual bool check_recv_disconnect()override;
     private:
         TcpSocket tcp;
         SSL *ssl;

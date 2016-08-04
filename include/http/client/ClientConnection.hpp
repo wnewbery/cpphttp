@@ -18,7 +18,7 @@ namespace http
         ~ClientConnection();
 
         void reset(std::unique_ptr<http::Socket> &&new_socket);
-        bool is_connected()const { return socket != nullptr; }
+        bool is_connected()const;
         /**Make a HTTP request.
          * Request will be modified with relevant Content-Length header if needed.
          */
