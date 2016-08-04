@@ -23,6 +23,7 @@ public:
     }
 
     virtual void disconnect() {}
+    virtual bool check_recv_disconnect() { return false; }
 
     virtual size_t recv(void *buffer, size_t len)
     {
