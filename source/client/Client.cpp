@@ -37,6 +37,7 @@ namespace http
         }
         if (!sent)
         {
+            conn.reset(nullptr);
             conn.reset(_factory->connect(host, port, tls));
             conn.send_request(request);
         }

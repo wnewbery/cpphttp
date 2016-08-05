@@ -182,6 +182,7 @@ namespace http
             if (!sent)
             {
                 //Send with new connection, if this fails abort
+                conn.reset(nullptr);
                 conn.reset(client->params.socket_factory->connect(
                     client->params.host, client->params.port, client->params.tls));
                 conn.send_request(*request);
