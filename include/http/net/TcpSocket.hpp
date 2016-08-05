@@ -10,9 +10,12 @@ namespace http
         TcpSocket();
         TcpSocket(const std::string &host, uint16_t port);
         TcpSocket(SOCKET socket, const sockaddr *address);
-        TcpSocket(TcpSocket &&mv);
         virtual ~TcpSocket();
 
+        TcpSocket(const TcpSocket&) = delete;
+        TcpSocket& operator= (const TcpSocket&) = delete;
+
+        TcpSocket(TcpSocket &&mv);
         TcpSocket& operator = (TcpSocket &&mv);
 
         void set_socket(SOCKET socket, const sockaddr *address);
