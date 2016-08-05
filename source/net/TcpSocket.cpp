@@ -151,7 +151,7 @@ namespace http
         FD_ZERO(&set);
         FD_SET(socket, &set);
         timeval timeout = {0, 0};
-        auto ret = ::select(1, &set, nullptr, nullptr, &timeout);
+        auto ret = ::select((int)socket + 1, &set, nullptr, nullptr, &timeout);
         if (ret == 0) return false;
         else if (ret < 0)
         {
