@@ -34,7 +34,8 @@ namespace http
 {
     inline void set_thread_name(const std::string &str)
     {
-        pthread_setname_np(pthread_self(), str.c_str());
+        auto str2 = str.substr(0, 15);
+        pthread_setname_np(pthread_self(), str2.c_str());
     }
 }
 #endif
