@@ -26,6 +26,11 @@ namespace http
         if (str) return str;
         else return errno_string(error);
     }
+    
+    void OpenSslSocket::SslDeleter::operator()(SSL *ssl)const
+    {
+        SSL_free(ssl);
+    }
 
     OpenSslSocket::OpenSslSocket() : tcp(), ssl(nullptr)
     {
@@ -44,14 +49,14 @@ namespace http
     {
         tcp.connect(host, port);
 
-        ssl = SSL_new(openssl_ctx);
+        ssl.reset(SSL_new(openssl_ctx));
 
         //Currently only supporting blocking sockets, so dont care about renegotiation details
-        SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+        SSL_set_mode(ssl.get(), SSL_MODE_AUTO_RETRY);
 
-        SSL_set_fd(ssl, tcp.get_socket());
-        auto err = SSL_connect(ssl);
-        if (err < 0) throw OpenSslSocketError(ssl, err);
+        SSL_set_fd(ssl.get(), tcp.get_socket());
+        auto err = SSL_connect(ssl.get());
+        if (err < 0) throw OpenSslSocketError(ssl.get(), err);
     }
 
     std::string OpenSslSocket::address_str()const
@@ -64,18 +69,19 @@ namespace http
     }
     void OpenSslSocket::disconnect()
     {
+        if (ssl) SSL_shutdown(ssl.get());
         tcp.disconnect();
     }
     size_t OpenSslSocket::recv(void *buffer, size_t len)
     {
-        auto len2 = SSL_read(ssl, (char*)buffer, (int)len);
-        if (len2 < 0) throw OpenSslSocketError(ssl, len2);
+        auto len2 = SSL_read(ssl.get(), (char*)buffer, (int)len);
+        if (len2 < 0) throw OpenSslSocketError(ssl.get(), len2);
         return (size_t)len2;
     }
     size_t OpenSslSocket::send(const void *buffer, size_t len)
     {
-        auto len2 = SSL_write(ssl, (const char*)buffer, (int)len);
-        if (len2 < 0) throw OpenSslSocketError(ssl, len2);
+        auto len2 = SSL_write(ssl.get(), (const char*)buffer, (int)len);
+        if (len2 < 0) throw OpenSslSocketError(ssl.get(), len2);
         return (size_t)len2;
     }
 }

@@ -2,7 +2,7 @@
 #include "Net.hpp"
 #include "Socket.hpp"
 #include "TcpSocket.hpp"
-
+#include <memory>
 #include <openssl/opensslconf.h>
 #include <openssl/ssl.h>
 #ifndef OPENSSL_THREADS
@@ -37,7 +37,11 @@ namespace http
         virtual size_t send(const void *buffer, size_t len)override;
         virtual bool check_recv_disconnect()override;
     private:
+        struct SslDeleter
+        {
+            void operator()(SSL *ssl)const;
+        };
         TcpSocket tcp;
-        SSL *ssl;
+        std::unique_ptr<SSL, SslDeleter> ssl;
     };
 }
