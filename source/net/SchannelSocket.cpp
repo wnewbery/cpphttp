@@ -31,17 +31,55 @@ namespace http
         };
     }
 
+    SchannelSocket::UniqueCtxtHandle::UniqueCtxtHandle()
+    {
+        SecInvalidateHandle(&handle);
+    }
+    SchannelSocket::UniqueCtxtHandle::~UniqueCtxtHandle()
+    {
+        reset();
+    }
+    void SchannelSocket::UniqueCtxtHandle::reset()
+    {
+        if (SecIsValidHandle(&handle))
+        {
+            sspi->DeleteSecurityContext(&handle);
+            SecInvalidateHandle(&handle);
+        }
+    }
+
+    SchannelSocket::UniqueCredHandle::UniqueCredHandle()
+    {
+        SecInvalidateHandle(&handle);
+    }
+    SchannelSocket::UniqueCredHandle::~UniqueCredHandle()
+    {
+        reset();
+    }
+    void SchannelSocket::UniqueCredHandle::reset()
+    {
+        if (SecIsValidHandle(&handle))
+        {
+            sspi->FreeCredentialsHandle(&handle);
+            SecInvalidateHandle(&handle);
+        }
+    }
+
     SchannelSocket::SchannelSocket()
         : tcp()
+        , context(), credentials()
+        , recv_encrypted_buffer(), recv_decrypted_buffer()
+        , sec_sizes()
+        , header_buffer(nullptr), trailer_buffer(nullptr)
     {
     }
     SchannelSocket::SchannelSocket(const std::string & host, uint16_t port)
-        : tcp()
+        : SchannelSocket()
     {
         connect(host, port);
     }
     SchannelSocket::SchannelSocket(SOCKET socket, const sockaddr * address)
-        : tcp()
+        : SchannelSocket()
     {
         set_socket(socket, address);
     }
@@ -53,15 +91,15 @@ namespace http
     {
         assert(sspi);
 
-        clear_schannel_handles(); //if connect partially excceeded, be sure to invalidate the schannel context
-
+        context.reset();
+        credentials.reset();
         recv_encrypted_buffer.clear();
         recv_decrypted_buffer.clear();
         tcp.connect(host, port);
 
         client_handshake();
 
-        auto status = sspi->QueryContextAttributes(&context, SECPKG_ATTR_STREAM_SIZES, &sec_sizes);
+        auto status = sspi->QueryContextAttributes(&context.handle, SECPKG_ATTR_STREAM_SIZES, &sec_sizes);
         if (FAILED(status)) throw NetworkError("QueryContextAttributes SECPKG_ATTR_STREAM_SIZES failed");
 
         header_buffer.reset(new uint8_t[sec_sizes.cbHeader]);
@@ -80,14 +118,14 @@ namespace http
         DWORD type = SCHANNEL_SHUTDOWN;
         SecBuffer out_buffer = { sizeof(type), SECBUFFER_TOKEN, &type };
         SecBufferDesc out_buffer_desc = { SECBUFFER_VERSION, 1, &out_buffer };
-        auto status = sspi->ApplyControlToken(&context, &out_buffer_desc);
+        auto status = sspi->ApplyControlToken(&context.handle, &out_buffer_desc);
         if (status != SEC_E_OK) throw std::runtime_error("ApplyControlToken failed");
         //create a tls close notification message
         SecBufferSingleAutoFree notify_buffer;
         TimeStamp expiry;
         DWORD sspi_out_flags;
-        status = sspi->InitializeSecurityContextW(&credentials, &context, nullptr, SSPI_FLAGS, 0,
-            SECURITY_NATIVE_DREP, nullptr, 0, &context, &notify_buffer.desc,
+        status = sspi->InitializeSecurityContextW(&credentials.handle, &context.handle, nullptr, SSPI_FLAGS, 0,
+            SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &notify_buffer.desc,
             &sspi_out_flags, &expiry);
         if (status != SEC_E_OK) throw std::runtime_error("InitializeSecurityContext failed");
 
@@ -98,8 +136,8 @@ namespace http
         }
 
         //cleanup
-        clear_schannel_handles();
-
+        context.reset();
+        credentials.reset();
         tcp.disconnect();
     }
 
@@ -135,7 +173,7 @@ namespace http
             SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
 
             //Decrypt
-            auto status = sspi->DecryptMessage(&context, &buffers_desc, 0, nullptr);
+            auto status = sspi->DecryptMessage(&context.handle, &buffers_desc, 0, nullptr);
 
             if (status == SEC_I_CONTEXT_EXPIRED) break; //disconnect signal
             else if (status == SEC_E_OK || status == SEC_I_RENEGOTIATE)
@@ -203,25 +241,12 @@ namespace http
         buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
         SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
         //Encrypt data
-        auto status = sspi->EncryptMessage(&context, 0, &buffers_desc, 0);
+        auto status = sspi->EncryptMessage(&context.handle, 0, &buffers_desc, 0);
         if (FAILED(status)) throw NetworkError("EncryptMessage failed");
         //Send data
         send_sec_buffers(buffers_desc);
 
         return len;
-    }
-    void SchannelSocket::clear_schannel_handles()
-    {
-        if (SecIsValidHandle(&context))
-        {
-            sspi->DeleteSecurityContext(&context);
-            SecInvalidateHandle(&context);
-        }
-        if (SecIsValidHandle(&credentials))
-        {
-            sspi->FreeCredentialsHandle(&credentials);
-            SecInvalidateHandle(&credentials);
-        }
     }
 
     void SchannelSocket::init_credentials()
@@ -234,8 +259,9 @@ namespace http
         schannel_cred.dwFlags |= SCH_USE_STRONG_CRYPTO;
 
         TimeStamp expiry;
+        credentials.reset();
         auto status = sspi->AcquireCredentialsHandleW(nullptr, UNISP_NAME_W, SECPKG_CRED_OUTBOUND,
-            nullptr, &schannel_cred, nullptr, nullptr, &credentials, &expiry);
+            nullptr, &schannel_cred, nullptr, nullptr, &credentials.handle, &expiry);
 
         if (status != SEC_E_OK) throw std::runtime_error("AcquireCredentialsHandleW failed");
     }
@@ -264,7 +290,7 @@ namespace http
             out_buffer.buffer = { 0, SECBUFFER_TOKEN, nullptr };
             //call sspi
             DWORD sspi_out_flags;
-            status = sspi->InitializeSecurityContextW(&credentials, &context, nullptr,
+            status = sspi->InitializeSecurityContextW(&credentials.handle, &context.handle, nullptr,
                 SSPI_FLAGS, 0, SECURITY_NATIVE_DREP, &in_buffer_desc, 0, nullptr,
                 &out_buffer.desc, &sspi_out_flags, &expiry);
 
@@ -334,8 +360,9 @@ namespace http
 
         out_buffer.buffer = { 0, SECBUFFER_TOKEN, nullptr };
         //initialize
-        status = sspi->InitializeSecurityContextW(&credentials, nullptr, &host_16[0], SSPI_FLAGS,
-            0, SECURITY_NATIVE_DREP, nullptr, 0, &context, &out_buffer.desc,
+        context.reset();
+        status = sspi->InitializeSecurityContextW(&credentials.handle, nullptr, &host_16[0], SSPI_FLAGS,
+            0, SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &out_buffer.desc,
             &sspi_out_flags, &expiry);
         if (status != SEC_I_CONTINUE_NEEDED) throw NetworkError("InitializeSecurityContextW failed");
 

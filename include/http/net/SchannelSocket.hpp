@@ -24,17 +24,31 @@ namespace http
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
     private:
+        struct UniqueCtxtHandle
+        {
+            UniqueCtxtHandle();
+            ~UniqueCtxtHandle();
+            void reset();
+            CtxtHandle handle;
+        };
+        struct UniqueCredHandle
+        {
+            UniqueCredHandle();
+            ~UniqueCredHandle();
+            void reset();
+            CredHandle handle;
+        };
+
         TcpSocket tcp;
 
-        CtxtHandle context;
-        CredHandle credentials;
+        UniqueCtxtHandle context;
+        UniqueCredHandle credentials;
         std::vector<uint8_t> recv_encrypted_buffer;
         std::vector<uint8_t> recv_decrypted_buffer;
         SecPkgContext_StreamSizes sec_sizes;
         std::unique_ptr<uint8_t[]> header_buffer;
         std::unique_ptr<uint8_t[]> trailer_buffer;
 
-        void clear_schannel_handles();
         void init_credentials();
         void client_handshake_loop(bool initial_read);
         void client_handshake();
