@@ -58,9 +58,9 @@ namespace http
         if (buffer_len != 0) throw std::runtime_error("Unexpected content after response");
 
         Response resp;
-        resp.headers = parser.headers();
-        resp.body = parser.body();
-        resp.status = parser.status();
+        resp.headers = std::move(parser.headers());
+        resp.body = std::move(parser.body());
+        resp.status = std::move(parser.status());
         return resp;
     }
 }

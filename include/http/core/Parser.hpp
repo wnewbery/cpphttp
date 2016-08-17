@@ -44,7 +44,9 @@ namespace http
 
         State state()const { return _state; }
         const Version& version()const { return _version; }
+        Headers&& headers() { return std::move(_headers); }
         const Headers& headers()const { return _headers; }
+        std::string &&body() { return std::move(_body); }
         const std::string &body()const { return _body; }
 
         bool has_content_length()const
