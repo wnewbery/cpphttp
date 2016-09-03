@@ -13,7 +13,10 @@ namespace http
     CoreServer::CoreServer(const std::string & bind, uint16_t port)
         : listen_socket(bind, port), threads()
     {}
-    
+
+    CoreServer::~CoreServer()
+    {}
+
     void CoreServer::run()
     {
         while (true)

@@ -21,6 +21,7 @@ namespace http
     public:
         CoreServer(const std::string &bind, uint16_t port);
         CoreServer(uint16_t port) : CoreServer("0.0.0.0", port) {}
+        ~CoreServer();
 
         void run();
 
@@ -50,7 +51,7 @@ namespace http
             CoreServer *server;
             std::unique_ptr<Socket> socket;
         };
-        
+
         TcpListenSocket listen_socket;
         std::list<Thread> threads;
     };
