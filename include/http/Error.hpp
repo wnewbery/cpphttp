@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "Method.hpp"
 
 namespace http
 {
@@ -62,6 +63,9 @@ namespace http
     public:
         MethodNotAllowed(const std::string &method, const std::string &path)
             : ClientErrorResponse(method + " not allowed for " + path, 405)
+        {}
+        MethodNotAllowed(Method method, const std::string &path)
+            : MethodNotAllowed(std::to_string(method), path)
         {}
     };
     /**406 Not Acceptable*/
