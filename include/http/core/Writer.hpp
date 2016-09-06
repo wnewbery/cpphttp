@@ -36,7 +36,6 @@ namespace http
     {
         Headers &headers = message.headers;
         headers.set("Date", format_time(time(nullptr)));
-        if (!message.body.empty()) headers.set("Content-Length", std::to_string(message.body.size()));
     }
 
     inline void send_request(Socket *socket, Request &request)
@@ -49,13 +48,34 @@ namespace http
         if (!request.body.empty()) socket->send_all(request.body.data(), request.body.size());
     }
 
-    inline void send_response(Socket *socket, Response &response)
+    inline void send_response(Socket *socket, const std::string &req_method, Response &response)
     {
+        auto sc = response.status.code;
+        //For certain response codes, there must not be a message body
+        bool message_body_allowed = sc != 204 && sc != 205 && sc != 304;
+        
+       //For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
+        bool send_message_body = message_body_allowed && req_method != "HEAD";
+
+        if (message_body_allowed)
+        {
+            //TODO: Support chunked streams in the future
+            response.headers.set("Content-Length", std::to_string(response.body.size()));
+        }
+        else if (!response.body.size())
+        {
+            throw std::runtime_error("HTTP forbids this response from having a body");
+        }
+
         add_default_headers(response);
         std::stringstream ss;
         write_response_header(ss, response);
         auto ss_str = ss.str();
         socket->send_all(ss_str.data(), ss_str.size());
-        if (!response.body.empty()) socket->send_all(response.body.data(), response.body.size());
+
+        if (send_message_body && !response.body.empty())
+        {
+            socket->send_all(response.body.data(), response.body.size());
+        }
     }
 }

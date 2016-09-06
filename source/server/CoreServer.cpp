@@ -124,7 +124,7 @@ namespace http
             }
 
             //Send response
-            send_response(socket.get(), resp);
+            send_response(socket.get(), parser.method(), resp);
         }
     }
 }
