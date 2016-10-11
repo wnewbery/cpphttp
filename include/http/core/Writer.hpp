@@ -40,7 +40,8 @@ namespace http
 
     inline void send_request(Socket *socket, Request &request)
     {
-        add_default_headers(request);
+        if (!request.body.empty())
+            request.headers.set("Content-Length", std::to_string(request.body.size()));
         std::stringstream ss;
         write_request_header(ss, request);
         auto ss_str = ss.str();
