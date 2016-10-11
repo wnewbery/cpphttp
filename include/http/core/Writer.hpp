@@ -63,7 +63,7 @@ namespace http
             //TODO: Support chunked streams in the future
             response.headers.set("Content-Length", std::to_string(response.body.size()));
         }
-        else if (!response.body.size())
+        else if (!response.body.empty())
         {
             throw std::runtime_error("HTTP forbids this response from having a body");
         }
