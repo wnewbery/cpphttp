@@ -97,7 +97,7 @@ namespace http
             bool prefix;
             std::unordered_map<std::string, RequestHandlerPtr> methods;
             /**Named child paths.*/
-            std::unordered_map<std::string, Node> children;
+            std::unordered_map<std::string, std::unique_ptr<Node>> children;
             /**Parameter child node. Note that all such routes must use a common parameter name.*/
             Param param;
 

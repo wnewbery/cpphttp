@@ -35,7 +35,7 @@ namespace http
             auto child = node->children.find(*i);
             if (child != node->children.end())
             {
-                node = &child->second;
+                node = child->second.get();
             }
             else if (node->param)
             {
@@ -87,7 +87,9 @@ namespace http
             }
             else // Path segment
             {
-                node = &node->children.emplace(*i, Node()).first->second;
+              auto &p = node->children[*i];
+              if (!p) p.reset(new Node());
+              node = p.get();
             }
         }
         // Make node a prefix if needed
