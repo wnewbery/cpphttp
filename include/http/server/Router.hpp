@@ -9,21 +9,14 @@ namespace http
     class Response;
     class UrlError;
     typedef std::unordered_map<std::string, std::string> PathParams;
-    class RequestHandler
-    {
-    public:
-        virtual ~RequestHandler() {}
-
-        virtual Response handle(Request &request, PathParams &path_params)=0;
-    };
-    typedef std::shared_ptr<RequestHandler> RequestHandlerPtr;
+    typedef std::function<Response(Request&, PathParams&)> RequestHandler;
     /**A route found by Router for a path and method.
      * If true, contains the handler and path parameters.
      */
     struct MatchedRoute
     {
         /**Request handler if a route was matched, else null.*/
-        const RequestHandler *handler;
+        RequestHandler handler;
         /**Named path parameters from the matched URL path.*/
         PathParams path_params;
 
@@ -74,7 +67,7 @@ namespace http
          *    - If the path already exists as a prefix, and this one is not.
          *    - If adding a prefix path, and the path already exists as a non-prefix path.
          */
-        void add(const std::string &method, const std::string &path, RequestHandlerPtr handler);
+        void add(const std::string &method, const std::string &path, RequestHandler handler);
     private:
         typedef std::vector<std::string> PathParts;
         typedef PathParts::const_iterator PathIterator;
@@ -95,7 +88,7 @@ namespace http
              * A prefix node can not have child nodes.
              */
             bool prefix;
-            std::unordered_map<std::string, RequestHandlerPtr> methods;
+            std::unordered_map<std::string, RequestHandler> methods;
             /**Named child paths.*/
             std::unordered_map<std::string, std::unique_ptr<Node>> children;
             /**Parameter child node. Note that all such routes must use a common parameter name.*/

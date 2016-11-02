@@ -47,12 +47,12 @@ namespace http
         // Find method
         auto handler = node->methods.find(method);
         if (handler == node->methods.end()) throw MethodNotAllowed(method, path);
-        route.handler = handler->second.get();
+        route.handler = handler->second;
 
         return route;
     }
 
-    void Router::add(const std::string &method, const std::string &path, RequestHandlerPtr handler)
+    void Router::add(const std::string &method, const std::string &path, RequestHandler handler)
     {
         auto parts = get_parts(path);
         bool prefix;
