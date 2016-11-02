@@ -66,6 +66,8 @@ BOOST_AUTO_TEST_CASE(prefix)
     BOOST_CHECK(!router.get("GET", "/index"));
 
     BOOST_CHECK_THROW(router.add("GET", "/assets/other", handler), InvalidRouteError);
+    BOOST_CHECK_NO_THROW(router.add("GET", "/other/child", handler));
+    BOOST_CHECK_THROW(router.add("GET", "/other/*", handler), InvalidRouteError);
 }
 
 BOOST_AUTO_TEST_CASE(path_params)
