@@ -29,6 +29,7 @@ namespace http
     class InvalidRouteError : public std::runtime_error
     {
     public:
+        /**Construct a message with the method and path being added, and a descriptive failure reason.*/
         InvalidRouteError(const std::string &method, const std::string &path, const std::string &reason)
             : std::runtime_error("Invalid route " + method + " " + path + ": " + reason)
         {}
@@ -53,12 +54,12 @@ namespace http
          * Path segments starting with a colon (':') are path parameters, and the text following
          * the colon up to the next forward slash is the parameter name.
          *
-         * If the final segment is "/*", then this is a prefix route, and will match all child
-         * paths.
+         * If the final segment is "/&lowast;", then this is a prefix route, and will match all
+         * child paths.
          *
          * Example Paths:
          *    - "/" Site root page
-         *    - "/assets/*" All files/items under assets, e.g. "/assets/application.js".
+         *    - "/assets/&lowast;" All files/items under assets, e.g. "/assets/application.js".
          *    - "/profiles/:profile_id" A specific profile, with "profile_id" as a path parameter.
          *
          * @throws InvalidRouteError
@@ -74,9 +75,14 @@ namespace http
         /**A node representing a single path segment.*/
         struct Node
         {
+            /**Named path parameter and child node.
+             * True if a child node is present.
+             */
             struct Param
             {
+                /**The name of the parameter.*/
                 std::string name;
+                /**The child node containing further path segments or this segments methods.*/
                 std::unique_ptr<Node> node;
 
                 explicit operator bool()const
@@ -84,7 +90,7 @@ namespace http
                     return (bool)node;
                 };
             };
-            /**Prefix node for e.g. /assets/*. Otherwise need to match all segments.
+            /**Prefix node for e.g. /assets/&lowast;. Otherwise need to match all segments.
              * A prefix node can not have child nodes.
              */
             bool prefix;

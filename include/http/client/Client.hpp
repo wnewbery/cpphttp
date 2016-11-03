@@ -7,18 +7,19 @@
 
 namespace http
 {
-    /**@brief Simple HTTP client that manages the socket, parser, etc. components.*/
+    /**@brief Simple single-connection HTTP client that manages the socket, parser, etc. components.*/
     class Client
     {
     public:
+        /**Create a new HTTP client which connects to the specified remote server.*/
         Client(const std::string &host, uint16_t port, bool tls);
         ~Client();
 
         /**Get the default headers object. Any headers added will be included in any request,
          * if that request does not already have a header by that name.
-         * 
+         *
          * This can be useful for adding headers such as User-Agent.
-         * 
+         *
          * Note that Host, Date, Content-Length and Transfer-Encoding are always set by the
          * request as needed.
          */

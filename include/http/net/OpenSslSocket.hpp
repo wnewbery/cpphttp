@@ -11,24 +11,30 @@
 
 namespace http
 {
+    /**Get a descriptive error string for an OpenSSL error code.*/
     std::string openssl_err_str(SSL *ssl, int error);
-    
+
+    /**Errors from OpenSSL.*/
     class OpenSslSocketError : public SocketError
     {
     public:
+        /**Create an error message using openssl_err_str.*/
         OpenSslSocketError(SSL *ssl, int error)
             : SocketError(openssl_err_str(ssl, error))
         {
         }
     };
-    
+
+    /**TLS secure socket using OpenSSL.*/
     class OpenSslSocket : public Socket
     {
     public:
         OpenSslSocket();
+        /**Establish a client connection to a specific host and port.*/
         OpenSslSocket(const std::string &host, uint16_t port);
         virtual ~OpenSslSocket();
 
+        /**Establish a client connection to a specific host and port.*/
         void connect(const std::string &host, uint16_t port);
 
         virtual std::string address_str()const override;

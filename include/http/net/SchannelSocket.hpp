@@ -7,15 +7,20 @@
 #include <memory>
 namespace http
 {
+    /**TLS secure socket using the Window's Secure Channel.*/
     class SchannelSocket : public Socket
     {
     public:
         SchannelSocket();
+        /**Establish a client connection to a specific host and port.*/
         SchannelSocket(const std::string &host, uint16_t port);
+        /**Construct by taking ownership of an existing socket.*/
         SchannelSocket(SOCKET socket, const sockaddr *address);
         virtual ~SchannelSocket() {}
 
+        /**Construct by taking ownership of an existing socket.*/
         void set_socket(SOCKET socket, const sockaddr *address);
+        /**Establish a client connection to a specific host and port.*/
         void connect(const std::string &host, uint16_t port);
 
         virtual std::string address_str()const override;

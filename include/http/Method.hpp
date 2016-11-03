@@ -5,6 +5,7 @@
 #endif
 namespace http
 {
+    /**Known HTTP methods enumeration.*/
     enum Method
     {
         GET,

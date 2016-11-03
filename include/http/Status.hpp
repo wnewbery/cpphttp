@@ -5,6 +5,7 @@ namespace http
     //http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     //2016-03-01
 
+    /**HTTP known status codes enumeration.*/
     enum StatusCode
     {
         SC_CONTINUE = 100,
@@ -72,8 +73,12 @@ namespace http
         SC_NETWORK_AUTHENTICATION_REQUIRED = 511
     };
 
+    /**Gets a default text message for a status code.
+     * e.g. "Not Found" for 404.
+     */
     std::string default_status_msg(StatusCode sc);
 
+    /**A status code and message.*/
     struct Status
     {
         StatusCode code;

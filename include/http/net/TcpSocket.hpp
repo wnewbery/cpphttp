@@ -4,11 +4,14 @@
 #include <cstdint>
 namespace http
 {
+    /**Basic unencrypted TCP stream socket using SOCKET and related system API's.*/
     class TcpSocket : public Socket
     {
     public:
         TcpSocket();
+        /**Establish a new client connection. See connect.*/
         TcpSocket(const std::string &host, uint16_t port);
+        /**Construct using an existing socket. See set_socket.*/
         TcpSocket(SOCKET socket, const sockaddr *address);
         virtual ~TcpSocket();
 
@@ -18,12 +21,22 @@ namespace http
         TcpSocket(TcpSocket &&mv);
         TcpSocket& operator = (TcpSocket &&mv);
 
+        /**Take ownership of an existing TCP SOCKET object.
+         * The remote address object is used to populate the host and port.
+         */
         void set_socket(SOCKET socket, const sockaddr *address);
+        /**Gets the internal SOCKET object.*/
         SOCKET get_socket() { return socket; }
+        /**Create a new client side connection to a remote host or port.
+         * Host can either be a hostname or an IP address.
+         */
         void connect(const std::string &host, uint16_t port);
 
+        /**Gets the remote address as a string in the form `host() + ':' + port()`.*/
         virtual std::string address_str()const override;
+        /**Get the remote host name or IP address.*/
         const std::string &host()const { return _host; }
+        /**Get the remote port number.*/
         uint16_t port()const { return _port;; }
         virtual void disconnect()override;
         virtual size_t recv(void *buffer, size_t len)override;

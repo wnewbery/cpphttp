@@ -51,7 +51,13 @@ namespace http
         AsyncRequest() {}
         AsyncRequest(const AsyncRequest&) = delete;
         AsyncRequest& operator = (const AsyncRequest&) = delete;
+        /**Move constructor.
+         * A request object should not be moved if currently in use by a client.
+         */
         AsyncRequest(AsyncRequest&&) = default;
+        /**Move assignment.
+         * A request object should not be moved if currently in use by a client.
+         */
         AsyncRequest& operator = (AsyncRequest&&) = default;
 
         ~AsyncRequest();
@@ -66,7 +72,7 @@ namespace http
         }
         /**Reset so ready to be re-used.
          * The Request fields, on_completion and on_exception are left unaltered.
-         * 
+         *
          * Not thread safe.
          */
         void reset()
@@ -76,7 +82,7 @@ namespace http
             detail.response.headers.clear();
         }
 
-        /**Implementation details for use by AsyncClient.*/
+        /**Implementation details for use by AsyncClient or similar.*/
         struct Detail
         {
             /**Promise that can recieve the response syncronously.*/
@@ -91,7 +97,8 @@ namespace http
              * defined to be valid at any point in time.
              */
             Response response;
-
+        private:
+            friend class http::AsyncRequest;
             Detail() : promise(), future(), client(nullptr), response() {}
 
             Detail(const Detail&) = delete;
@@ -112,7 +119,9 @@ namespace http
                 mv.client = nullptr;
                 return *this;
             }
-        }detail;
+        };
+        /**Implementation details. See Detail.*/
+        Detail detail;
     };
     /**Params for AsyncClient.*/
     struct AsyncClientParams
@@ -160,7 +169,8 @@ namespace http
     class AsyncClient
     {
     public:
-        AsyncClient(const AsyncClientParams &params);
+        /**Construct a client using specified configuration parameters.*/
+        explicit AsyncClient(const AsyncClientParams &params);
         ~AsyncClient();
 
         /**Queue a request to be processed.

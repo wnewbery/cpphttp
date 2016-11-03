@@ -4,6 +4,13 @@
 #include <Windows.h>
 namespace http
 {
+    /**Sets the name of a thread as a debug aid.
+     *
+     * On Linux the name is limited to 15 bytes.
+     *
+     * On Windows thread names are only stored by an attached debugger. If no debugger is attached
+     * at the time, then the name will not be set.
+     */
     inline void set_thread_name(const std::string &str)
     {
         const DWORD MS_VC_EXCEPTION = 0x406D1388;

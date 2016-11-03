@@ -19,8 +19,10 @@ namespace http
     class CoreServer
     {
     public:
+        /**Listen on a specific interface local IP and port.*/
         CoreServer(const std::string &bind, uint16_t port);
-        CoreServer(uint16_t port) : CoreServer("0.0.0.0", port) {}
+        /**Listen on all interfaces for a given port.*/
+        explicit CoreServer(uint16_t port) : CoreServer("0.0.0.0", port) {}
         ~CoreServer();
 
         void run();
@@ -33,7 +35,7 @@ namespace http
         /**Create an error response page.
          * This may be called by CoreServer instead of handle_request if there was an issue reading
          * the HTTP request.
-         * 
+         *
          * Any uncaught exception will kill the thread.
          */
         virtual Response parser_error_page(const ParserError &err)=0;
