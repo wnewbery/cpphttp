@@ -70,6 +70,17 @@ BOOST_AUTO_TEST_CASE(success)
         BOOST_CHECK_EQUAL("OK", resp.body);
     }
 
+    {
+        // Expected to fail since cant validate the certificate
+        http::Request req;
+        req.method = GET;
+        req.headers.add("Host", "localhost");
+        req.raw_url = "/index.html";
+        BOOST_CHECK_THROW(
+            http::Client("127.0.0.1", BASE_PORT + 1, true, &socket_factory).make_request(req),
+            std::runtime_error);
+    }
+
     server.exit();
     server_thread.join();
 }
