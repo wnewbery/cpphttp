@@ -12,7 +12,7 @@ namespace http
     {
     public:
         /**Create a new HTTP client which connects to the specified remote server.*/
-        Client(const std::string &host, uint16_t port, bool tls);
+        Client(const std::string &host, uint16_t port, bool tls, SocketFactory *factory);
         ~Client();
 
         /**Get the default headers object. Any headers added will be included in any request,
@@ -24,11 +24,6 @@ namespace http
          * request as needed.
          */
         Headers& def_headers() { return _def_headers; }
-
-        /**Set the socket factory for creating connections.
-         * Does not take ownership.
-         */
-        void socket_factory(SocketFactory *factory) { _factory = factory; }
 
         /**Make a HTTP request.
          * Additional headers may be added to the request.

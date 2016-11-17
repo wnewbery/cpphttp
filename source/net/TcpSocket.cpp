@@ -82,7 +82,7 @@ namespace http
 
         auto ret = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &result.p);
         if (ret) throw ConnectionError(host, port);
-        
+
         int last_error = 0;
         for (auto p = result.p; p; p = p->ai_next)
         {
@@ -115,9 +115,6 @@ namespace http
     {
         if (socket != INVALID_SOCKET)
         {
-            ::shutdown(socket, SD_SEND);
-            char buffer[1];
-            ::recv(socket, buffer, sizeof(buffer), 0);
             closesocket(socket);
             socket = INVALID_SOCKET;
         }

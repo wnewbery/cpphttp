@@ -141,6 +141,7 @@
     <ClInclude Include="include\http\util\Thread.hpp" />
     <ClInclude Include="include\http\Version.hpp" />
     <ClInclude Include="source\net\Schannel.hpp" />
+    <ClInclude Include="source\net\SocketUtils.hpp" />
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>

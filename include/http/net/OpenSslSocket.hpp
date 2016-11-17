@@ -34,6 +34,7 @@ namespace http
         OpenSslSocket(const std::string &host, uint16_t port);
         virtual ~OpenSslSocket();
 
+        virtual SOCKET get()override { return tcp.get(); }
         /**Establish a client connection to a specific host and port.*/
         void connect(const std::string &host, uint16_t port);
 

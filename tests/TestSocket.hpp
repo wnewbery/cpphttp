@@ -17,6 +17,7 @@ public:
         if (factory) factory->remove_socket(this);
     }
 
+    virtual SOCKET get()override { return 0; }
     virtual std::string address_str()const
     {
         return host;

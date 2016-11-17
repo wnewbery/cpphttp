@@ -4,8 +4,8 @@
 #include <cassert>
 namespace http
 {
-    Client::Client(const std::string &host, uint16_t port, bool tls)
-        : _def_headers(), _factory(nullptr), conn()
+    Client::Client(const std::string &host, uint16_t port, bool tls, SocketFactory *factory)
+        : _def_headers(), _factory(factory), conn()
         , host(host), port(port), tls(tls)
     {
         _def_headers.set_default("Host", host + ":" + std::to_string(port));

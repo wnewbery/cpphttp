@@ -21,6 +21,8 @@ namespace http
         TcpSocket(TcpSocket &&mv);
         TcpSocket& operator = (TcpSocket &&mv);
 
+        explicit operator bool ()const { return socket != INVALID_SOCKET; }
+
         /**Take ownership of an existing TCP SOCKET object.
          * The remote address object is used to populate the host and port.
          */
@@ -32,6 +34,7 @@ namespace http
          */
         void connect(const std::string &host, uint16_t port);
 
+        virtual SOCKET get()override { return socket; }
         /**Gets the remote address as a string in the form `host() + ':' + port()`.*/
         virtual std::string address_str()const override;
         /**Get the remote host name or IP address.*/

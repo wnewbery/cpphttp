@@ -5,9 +5,11 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
 namespace http
 {
     class Socket;
+    class TcpSocket;
     class Request;
     class Response;
     class ParserError;
@@ -19,13 +21,25 @@ namespace http
     class CoreServer
     {
     public:
+        /**Create a server with no initial listeners.*/
+        CoreServer(){}
         /**Listen on a specific interface local IP and port.*/
-        CoreServer(const std::string &bind, uint16_t port);
+        CoreServer(const std::string &bind, uint16_t port)
+            : CoreServer()
+        {
+            add_tcp_listener(bind, port);
+        }
         /**Listen on all interfaces for a given port.*/
         explicit CoreServer(uint16_t port) : CoreServer("0.0.0.0", port) {}
-        ~CoreServer();
+        virtual ~CoreServer();
 
+        /**Add a listener before calling run.*/
+        void add_tcp_listener(const std::string &bind, uint16_t port);
+        /**Add a TLS listener before calling run.*/
+        void add_tls_listener(const std::string &bind, uint16_t port, const std::string &hostname);
         void run();
+        /**Signals the thread in run() and all workers to exit, then waits for them.*/
+        void exit();
 
     protected:
         /**Process the request. This may be called by multiple internal threads.
@@ -40,21 +54,47 @@ namespace http
          */
         virtual Response parser_error_page(const ParserError &err)=0;
     private:
+        struct Listener
+        {
+            TcpListenSocket socket;
+            bool tls;
+            std::string tls_hostname;
+        };
         class Thread
         {
         public:
-            Thread(CoreServer *server, std::unique_ptr<Socket> &&socket);
+            Thread(CoreServer *server, Listener *listener, TcpSocket &&socket);
+            ~Thread();
 
-            void main();
-            void main2();
+            void main_tcp(TcpSocket &&socket);
+            void main_tls(Listener *listener, TcpSocket &&socket);
+            void run();
 
             std::thread thread;
             std::atomic<bool> running;
             CoreServer *server;
             std::unique_ptr<Socket> socket;
         };
+        class SignalSocket
+        {
+        public:
+            SignalSocket();
+            ~SignalSocket();
+            void create();
+            void destroy();
+            void signal();
+            SOCKET get();
+        private:
+            SOCKET send;
+            SOCKET recv;
+        };
 
-        TcpListenSocket listen_socket;
+        std::vector<Listener> listeners;
         std::list<Thread> threads;
+        SignalSocket exit_socket;
+        /**Held by run(), preventing exit() from continueing until run() is finished.*/
+        std::mutex running_mutex;
+
+        void accept(Listener &listener);
     };
 }

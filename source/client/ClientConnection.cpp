@@ -5,6 +5,11 @@
 #include <cstring>
 namespace http
 {
+    ClientConnection::ClientConnection() : socket(nullptr) {}
+    ClientConnection::ClientConnection(std::unique_ptr<Socket> &&socket) : socket(nullptr)
+    {
+        reset(std::move(socket));
+    }
     ClientConnection::~ClientConnection()
     {}
 

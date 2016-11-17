@@ -64,12 +64,18 @@
     <ClCompile Include="tests\net\TlsServer.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
+    <ClCompile Include="tests\server\CoreServer.cpp">
+      <Filter>source\server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp">
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="tests\TestSocketFactory.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="tests\TestThread.hpp">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

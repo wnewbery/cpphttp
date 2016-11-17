@@ -1,4 +1,5 @@
 #pragma once
+#include "Os.hpp"
 #include <string>
 namespace http
 {
@@ -15,6 +16,8 @@ namespace http
         Socket() {}
         virtual ~Socket() {}
 
+        /**Get the underlaying socket.*/
+        virtual SOCKET get() = 0;
         /**Gets the remote address as a string for display purposes.
          * Includes the port number and may use a hostname or ip address.
          */

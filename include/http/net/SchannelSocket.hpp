@@ -31,6 +31,7 @@ namespace http
         /**Establish a client connection to a specific host and port.*/
         void connect(const std::string &host, uint16_t port);
 
+        virtual SOCKET get()override { return tcp.get(); }
         virtual std::string address_str()const override;
         virtual void disconnect()override;
         virtual bool check_recv_disconnect()override;

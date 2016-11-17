@@ -2,6 +2,7 @@
 #include "net/TlsListenSocket.hpp"
 #include "net/TlsSocket.hpp"
 #include "net/Net.hpp"
+#include "../TestThread.hpp"
 #include <iostream>
 #include <thread>
 
@@ -10,43 +11,7 @@ using namespace http;
 BOOST_AUTO_TEST_SUITE(TestTlsSocket)
 
 static const uint16_t BASE_PORT = 5000;
-/**Thread wrapper that forcefully kills the child rather than calling abort on failure.*/
-class TestThread : public std::thread
-{
-public:
-    template<class F>
-    TestThread(F func)
-        : std::thread([func]() -> void {
-            try
-            {
-                func();
-            }
-            catch (const std::exception &e)
-            {
-                BOOST_ERROR(std::string("Unexpected exception: ") + e.what());
-            }
-        })
-    {}
-    ~TestThread()
-    {
-        if (joinable())
-        {
-            auto handle = native_handle();
-            if (WaitForSingleObject(handle, 1000) != WAIT_OBJECT_0)
-            {
-                BOOST_ERROR("Forcefully terminating test child thread");
-                TerminateThread(handle, (DWORD)-1);
-            }
-            join();
-        }
-    }
-};
-template<class F> std::thread test_thread(F func)
-{
-    return std::thread([func]{
-        BOOST_CHECK_NO_THROW(func());
-    });
-}
+
 void success_server_thread()
 {
     SchannelListenSocket listen("127.0.0.1", BASE_PORT, "localhost");

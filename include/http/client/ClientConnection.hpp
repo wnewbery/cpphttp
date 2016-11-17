@@ -11,13 +11,13 @@ namespace http
     class ClientConnection
     {
     public:
-        ClientConnection() : socket(nullptr) {}
+        ClientConnection();
+        ClientConnection(const ClientConnection&)=delete;
         /**Construct by taking ownership of an existing socket.*/
-        explicit ClientConnection(std::unique_ptr<Socket> &&socket) : socket(nullptr)
-        {
-            reset(std::move(socket));
-        }
+        explicit ClientConnection(std::unique_ptr<Socket> &&socket);
         ~ClientConnection();
+
+        ClientConnection& operator = (const ClientConnection&) = delete;
 
         /**Use a new socket.*/
         void reset(std::unique_ptr<http::Socket> &&new_socket);

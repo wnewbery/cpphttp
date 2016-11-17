@@ -130,6 +130,7 @@
     <ClCompile Include="tests\net\TcpSocket.cpp" />
     <ClCompile Include="tests\net\TlsServer.cpp" />
     <ClCompile Include="tests\net\TlsSocket.cpp" />
+    <ClCompile Include="tests\server\CoreServer.cpp" />
     <ClCompile Include="tests\server\Router.cpp" />
     <ClCompile Include="tests\TestSocketFactory.cpp" />
     <ClCompile Include="tests\Time.cpp" />
@@ -139,6 +140,7 @@
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp" />
     <ClInclude Include="tests\TestSocketFactory.hpp" />
+    <ClInclude Include="tests\TestThread.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

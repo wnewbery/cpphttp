@@ -17,8 +17,7 @@ BOOST_AUTO_TEST_CASE(test)
         "\r\n"
         "0123456789";
 
-    Client client("localhost", 80, false);
-    client.socket_factory(&socket_factory);
+    Client client("localhost", 80, false, &socket_factory);
     client.def_headers().set("User-Agent", "test");
 
     {

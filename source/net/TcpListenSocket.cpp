@@ -1,6 +1,7 @@
 #include "net/TcpListenSocket.hpp"
 #include "net/Net.hpp"
 #include "net/TcpSocket.hpp"
+#include "net/SocketUtils.hpp"
 namespace http
 {
     TcpListenSocket::TcpListenSocket(const std::string &bind, uint16_t port)
@@ -30,6 +31,10 @@ namespace http
     TcpListenSocket::TcpListenSocket()
     {
         closesocket(socket);
+    }
+    void TcpListenSocket::set_non_blocking(bool non_blocking)
+    {
+        http::set_non_blocking(socket, non_blocking);
     }
     TcpSocket TcpListenSocket::accept()
     {

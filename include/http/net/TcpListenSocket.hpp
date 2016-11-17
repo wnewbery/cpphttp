@@ -14,8 +14,24 @@ namespace http
         /**Listen on a port for all interfaces.*/
         explicit TcpListenSocket(uint16_t port) : TcpListenSocket("0.0.0.0", port) {}
         TcpListenSocket();
+        TcpListenSocket(TcpListenSocket &&mv) : socket(mv.socket)
+        {
+            mv.socket = INVALID_SOCKET;
+        }
+        TcpListenSocket& operator = (TcpListenSocket &&mv)
+        {
+            std::swap(socket, mv.socket);
+            return *this;
+        }
 
-        /**Blocks awaiting the next inbound connection, then returns it as a TcpSocket object.*/
+        SOCKET get() { return socket; }
+        /**Sets this sockets non-blocking flag.*/
+        void set_non_blocking(bool non_blocking=true);
+        /**Accepts the next inbound connection, then returns it as a TcpSocket object.
+         * If the socket is blocking, will wait for the next connection and always returns a
+         * valid TcpSocket.
+         * If the socket is non-blocking, an empty TcpSocket may be returned.
+         */
         TcpSocket accept();
     private:
         SOCKET socket;
