@@ -126,6 +126,15 @@
     <ClInclude Include="include\http\headers\Accept.hpp">
       <Filter>include\headers</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\net\TlsListenSocket.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\net\SchannelListenSocket.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
+    <ClInclude Include="source\net\Schannel.hpp">
+      <Filter>source\net</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -187,6 +196,12 @@
     </ClCompile>
     <ClCompile Include="source\headers\Accept.cpp">
       <Filter>source\headers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\net\SchannelListenSocket.cpp">
+      <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="source\net\SchannelServerSocket.cpp">
+      <Filter>source\net</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

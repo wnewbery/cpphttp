@@ -35,7 +35,9 @@ namespace http
         {}
     };
 
-    /**Finds handlers for requests by method and uri path.*/
+    /**Finds handlers for requests by method and uri path.
+     * Finding handlers is thread safe, but adding them is not.
+     */
     class Router
     {
     public:

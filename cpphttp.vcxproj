@@ -124,10 +124,12 @@
     <ClInclude Include="include\http\net\Os.hpp" />
     <ClInclude Include="include\http\net\Net.hpp" />
     <ClInclude Include="include\http\net\OpenSslSocket.hpp" />
+    <ClInclude Include="include\http\net\SchannelListenSocket.hpp" />
     <ClInclude Include="include\http\net\SchannelSocket.hpp" />
     <ClInclude Include="include\http\net\Socket.hpp" />
     <ClInclude Include="include\http\net\TcpListenSocket.hpp" />
     <ClInclude Include="include\http\net\TcpSocket.hpp" />
+    <ClInclude Include="include\http\net\TlsListenSocket.hpp" />
     <ClInclude Include="include\http\net\TlsSocket.hpp" />
     <ClInclude Include="include\http\Request.hpp" />
     <ClInclude Include="include\http\Response.hpp" />
@@ -138,6 +140,7 @@
     <ClInclude Include="include\http\Url.hpp" />
     <ClInclude Include="include\http\util\Thread.hpp" />
     <ClInclude Include="include\http\Version.hpp" />
+    <ClInclude Include="source\net\Schannel.hpp" />
     <ClInclude Include="source\String.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +160,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="source\net\SchannelListenSocket.cpp" />
+    <ClCompile Include="source\net\SchannelServerSocket.cpp" />
     <ClCompile Include="source\net\SchannelSocket.cpp" />
     <ClCompile Include="source\net\Socket.cpp" />
     <ClCompile Include="source\net\TcpListenSocket.cpp" />

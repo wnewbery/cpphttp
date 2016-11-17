@@ -1,5 +1,6 @@
 #include "net/SchannelSocket.hpp"
 #include "net/Net.hpp"
+#include "Schannel.hpp"
 #include "String.hpp"
 #include <cassert>
 #include <algorithm>
@@ -13,31 +14,29 @@ namespace http
         static const DWORD SSPI_FLAGS = ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT |
             ISC_REQ_CONFIDENTIALITY | ISC_RET_EXTENDED_ERROR | ISC_REQ_ALLOCATE_MEMORY |
             ISC_REQ_STREAM;
-
-        struct SecBufferSingleAutoFree
-        {
-            SecBuffer buffer;
-            SecBufferDesc desc;
-
-            SecBufferSingleAutoFree()
-                : buffer{ 0, SECBUFFER_TOKEN, nullptr }
-                , desc{ SECBUFFER_VERSION, 1, &buffer }
-            {
-            }
-            ~SecBufferSingleAutoFree()
-            {
-                if (buffer.pvBuffer) sspi->FreeContextBuffer(buffer.pvBuffer);
-            }
-        };
     }
 
     SchannelSocket::UniqueCtxtHandle::UniqueCtxtHandle()
     {
         SecInvalidateHandle(&handle);
     }
+    SchannelSocket::UniqueCtxtHandle::UniqueCtxtHandle(UniqueCtxtHandle &&mv)
+        : handle(mv.handle)
+    {
+        SecInvalidateHandle(&mv.handle);
+    }
     SchannelSocket::UniqueCtxtHandle::~UniqueCtxtHandle()
     {
         reset();
+    }
+    SchannelSocket::UniqueCtxtHandle& SchannelSocket::UniqueCtxtHandle::operator = (UniqueCtxtHandle &&mv)
+    {
+        std::swap(handle, mv.handle);
+        return *this;
+    }
+    SchannelSocket::UniqueCtxtHandle::operator bool()const
+    {
+        return SecIsValidHandle(&handle);
     }
     void SchannelSocket::UniqueCtxtHandle::reset()
     {
@@ -52,9 +51,19 @@ namespace http
     {
         SecInvalidateHandle(&handle);
     }
+    SchannelSocket::UniqueCredHandle::UniqueCredHandle(UniqueCredHandle &&mv)
+        : handle(mv.handle)
+    {
+        SecInvalidateHandle(&mv.handle);
+    }
     SchannelSocket::UniqueCredHandle::~UniqueCredHandle()
     {
         reset();
+    }
+    SchannelSocket::UniqueCredHandle& SchannelSocket::UniqueCredHandle::operator = (UniqueCredHandle &&mv)
+    {
+        std::swap(handle, mv.handle);
+        return *this;
     }
     void SchannelSocket::UniqueCredHandle::reset()
     {
@@ -64,14 +73,24 @@ namespace http
             SecInvalidateHandle(&handle);
         }
     }
+    void SchannelSocket::SecBufferSingleAutoFree::free()
+    {
+        if (buffer.pvBuffer) sspi->FreeContextBuffer(buffer.pvBuffer);
+        buffer.pvBuffer = nullptr;
+        buffer.cbBuffer = 0;
+    }
 
     SchannelSocket::SchannelSocket()
-        : tcp()
+        : tcp(), server(false)
         , context(), credentials()
         , recv_encrypted_buffer(), recv_decrypted_buffer()
         , sec_sizes()
         , header_buffer(nullptr), trailer_buffer(nullptr)
     {
+    }
+    SchannelSocket::SchannelSocket(SchannelSocket &&mv)
+    {
+        *this = std::move(mv);
     }
     SchannelSocket::SchannelSocket(const std::string & host, uint16_t port)
         : SchannelSocket()
@@ -82,6 +101,18 @@ namespace http
         : SchannelSocket()
     {
         set_socket(socket, address);
+    }
+    SchannelSocket& SchannelSocket::operator = (SchannelSocket &&mv)
+    {
+        tcp = std::move(mv.tcp);
+        context = std::move(mv.context);
+        credentials = std::move(mv.credentials);
+        recv_encrypted_buffer = std::move(mv.recv_encrypted_buffer);
+        recv_decrypted_buffer = std::move(mv.recv_decrypted_buffer);
+        sec_sizes = std::move(mv.sec_sizes);
+        header_buffer = std::move(mv.header_buffer);
+        trailer_buffer = std::move(mv.trailer_buffer);
+        return *this;
     }
     void SchannelSocket::set_socket(SOCKET socket, const sockaddr * address)
     {
@@ -98,12 +129,7 @@ namespace http
         tcp.connect(host, port);
 
         client_handshake();
-
-        auto status = sspi->QueryContextAttributes(&context.handle, SECPKG_ATTR_STREAM_SIZES, &sec_sizes);
-        if (FAILED(status)) throw NetworkError("QueryContextAttributes SECPKG_ATTR_STREAM_SIZES failed");
-
-        header_buffer.reset(new uint8_t[sec_sizes.cbHeader]);
-        trailer_buffer.reset(new uint8_t[sec_sizes.cbTrailer]);
+        alloc_buffers();
     }
     std::string SchannelSocket::address_str() const
     {
@@ -115,27 +141,47 @@ namespace http
     }
     void SchannelSocket::disconnect()
     {
+        // Apply SCHANNEL_SHUTDOWN
         DWORD type = SCHANNEL_SHUTDOWN;
         SecBuffer out_buffer = { sizeof(type), SECBUFFER_TOKEN, &type };
         SecBufferDesc out_buffer_desc = { SECBUFFER_VERSION, 1, &out_buffer };
         auto status = sspi->ApplyControlToken(&context.handle, &out_buffer_desc);
         if (status != SEC_E_OK) throw std::runtime_error("ApplyControlToken failed");
-        //create a tls close notification message
+
+        // Create a tls close notification message
         SecBufferSingleAutoFree notify_buffer;
         TimeStamp expiry;
         DWORD sspi_out_flags;
-        status = sspi->InitializeSecurityContextW(&credentials.handle, &context.handle, nullptr, SSPI_FLAGS, 0,
-            SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &notify_buffer.desc,
-            &sspi_out_flags, &expiry);
-        if (status != SEC_E_OK) throw std::runtime_error("InitializeSecurityContext failed");
 
-        //send the message
+        if (server)
+        {
+            DWORD sspi_flags =
+                ASC_REQ_SEQUENCE_DETECT |
+                ASC_REQ_REPLAY_DETECT |
+                ASC_REQ_CONFIDENTIALITY |
+                ASC_REQ_EXTENDED_ERROR |
+                ASC_REQ_ALLOCATE_MEMORY |
+                ASC_REQ_STREAM;
+            status = sspi->AcceptSecurityContext(&credentials.handle, &context.handle, nullptr,
+                sspi_flags, 0, nullptr, &notify_buffer.desc, &sspi_out_flags, &expiry);
+            if (status != SEC_E_OK) throw std::runtime_error("AcceptSecurityContext failed");
+        }
+        else
+        {
+            status = sspi->InitializeSecurityContextW(
+                &credentials.handle, &context.handle, nullptr, SSPI_FLAGS, 0,
+                SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &notify_buffer.desc,
+                &sspi_out_flags, &expiry);
+            if (status != SEC_E_OK) throw std::runtime_error("InitializeSecurityContext failed");
+
+        }
+        // Send the message
         if (notify_buffer.buffer.pvBuffer && notify_buffer.buffer.cbBuffer)
         {
             tcp.send_all((const uint8_t*)notify_buffer.buffer.pvBuffer, notify_buffer.buffer.cbBuffer);
         }
 
-        //cleanup
+        // Cleanup
         context.reset();
         credentials.reset();
         tcp.disconnect();
@@ -143,14 +189,14 @@ namespace http
 
     size_t SchannelSocket::recv(void * vbytes, size_t len)
     {
-        auto bytes = (char*)vbytes;
         if (!recv_decrypted_buffer.empty())
         {   // Already had some data (last recv was less than SSPI decrypted)
             auto len2 = std::min(len, recv_decrypted_buffer.size());
-            memcpy(bytes, recv_decrypted_buffer.data(), len2);
+            memcpy(vbytes, recv_decrypted_buffer.data(), len2);
             recv_decrypted_buffer.erase(recv_decrypted_buffer.begin(), recv_decrypted_buffer.begin() + len2);
             return len2;
         }
+        auto bytes = (char*)vbytes;
         bool do_read = recv_encrypted_buffer.size() < sec_sizes.cbBlockSize;
         size_t len_out = 0;
         while (true)
@@ -164,7 +210,8 @@ namespace http
                 }
             }
             do_read = true;
-            //Prepare decryption buffers
+
+            // Prepare decryption buffers
             SecBuffer buffers[4];
             buffers[0] = { (DWORD)recv_encrypted_buffer.size(), SECBUFFER_DATA, &recv_encrypted_buffer[0] };
             buffers[1] = { 0, SECBUFFER_EMPTY, nullptr };
@@ -172,10 +219,13 @@ namespace http
             buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
             SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
 
-            //Decrypt
+            // Decrypt
             auto status = sspi->DecryptMessage(&context.handle, &buffers_desc, 0, nullptr);
 
-            if (status == SEC_I_CONTEXT_EXPIRED) break; //disconnect signal
+            if (!server && status == SEC_I_CONTEXT_EXPIRED)
+            {
+                break; // Disconnect signal
+            }
             else if (status == SEC_E_OK || status == SEC_I_RENEGOTIATE)
             {
                 SecBuffer *buffer_data = nullptr, *buffer_extra = nullptr;
@@ -212,6 +262,9 @@ namespace http
 
                 if (status == SEC_I_RENEGOTIATE)
                 {
+                    if (server)
+                        throw std::runtime_error("Unexpected server side SEC_I_RENEGOTIATE");
+
                     client_handshake_loop(false);
                 }
 
@@ -224,7 +277,7 @@ namespace http
             }
             else
             {
-                throw NetworkError("DescyptMessage failed");
+                throw NetworkError("DecryptMessage failed");
             }
         }
 
@@ -232,7 +285,7 @@ namespace http
     }
     size_t SchannelSocket::send(const void * buffer, size_t len)
     {
-        //Prepare encryption buffers
+        // Prepare encryption buffers
         std::vector<uint8_t> bytes_tmp((const char*)buffer, ((const char*)buffer) + len);
         SecBuffer buffers[4];
         buffers[0] = { sec_sizes.cbHeader, SECBUFFER_STREAM_HEADER, header_buffer.get() };
@@ -240,15 +293,23 @@ namespace http
         buffers[2] = { sec_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, trailer_buffer.get() };
         buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
         SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
-        //Encrypt data
+        // Encrypt data
         auto status = sspi->EncryptMessage(&context.handle, 0, &buffers_desc, 0);
         if (FAILED(status)) throw NetworkError("EncryptMessage failed");
-        //Send data
+        // Send data
         send_sec_buffers(buffers_desc);
 
         return len;
     }
 
+    void SchannelSocket::alloc_buffers()
+    {
+        auto status = sspi->QueryContextAttributes(&context.handle, SECPKG_ATTR_STREAM_SIZES, &sec_sizes);
+        if (FAILED(status)) throw NetworkError("QueryContextAttributes SECPKG_ATTR_STREAM_SIZES failed");
+
+        header_buffer.reset(new uint8_t[sec_sizes.cbHeader]);
+        trailer_buffer.reset(new uint8_t[sec_sizes.cbTrailer]);
+    }
     void SchannelSocket::init_credentials()
     {
         SCHANNEL_CRED schannel_cred = { 0 };
@@ -277,37 +338,35 @@ namespace http
 
         while (true)
         {
-            //Read data if needed
+            // Read data if needed
             if (recv_encrypted_buffer.empty() || status == SEC_E_INCOMPLETE_MESSAGE)
             {
                 if (do_read) recv_encrypted();
                 else do_read = true;
             }
 
-            //set up buffers
+            // Set up buffers
             in_buffers[0] = { (DWORD)recv_encrypted_buffer.size(), SECBUFFER_TOKEN, recv_encrypted_buffer.data() };
             in_buffers[1] = { 0, SECBUFFER_EMPTY, nullptr };
             out_buffer.buffer = { 0, SECBUFFER_TOKEN, nullptr };
-            //call sspi
+
+            // Call SSPI
             DWORD sspi_out_flags;
             status = sspi->InitializeSecurityContextW(&credentials.handle, &context.handle, nullptr,
                 SSPI_FLAGS, 0, SECURITY_NATIVE_DREP, &in_buffer_desc, 0, nullptr,
                 &out_buffer.desc, &sspi_out_flags, &expiry);
 
-            //send requested output
+            // Send requested output
             if (status == SEC_E_OK || status == SEC_I_CONTINUE_NEEDED ||
                 (FAILED(status) && (sspi_out_flags & ISC_RET_EXTENDED_ERROR)))
             {
                 if (out_buffer.buffer.cbBuffer && out_buffer.buffer.pvBuffer)
                 {
                     send_sec_buffers(out_buffer.desc);
-                    sspi->FreeContextBuffer(out_buffer.buffer.pvBuffer);
-                    out_buffer.buffer.pvBuffer = nullptr;
-                    out_buffer.buffer.cbBuffer = 0;
+                    out_buffer.free();
                 }
             }
-
-            //read more data and retry
+            // Read more data and retry
             if (status == SEC_E_INCOMPLETE_MESSAGE) continue;
             //completed
             else if (status == SEC_E_OK)
