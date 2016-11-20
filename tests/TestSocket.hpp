@@ -16,17 +16,21 @@ public:
     {
         if (factory) factory->remove_socket(this);
     }
-
+#if _WIN32
     virtual SOCKET get()override { return 0; }
+#else
+    virtual http::SOCKET get()override { return 0; }
+#endif
     virtual std::string address_str()const
     {
         return host;
     }
 
-    virtual void disconnect() {}
-    virtual bool check_recv_disconnect() { return false; }
+    virtual void close()override {}
+    virtual void disconnect()override {}
+    virtual bool check_recv_disconnect()override { return false; }
 
-    virtual size_t recv(void *buffer, size_t len)
+    virtual size_t recv(void *buffer, size_t len)override
     {
         if (sent_last)
         {
@@ -39,7 +43,7 @@ public:
         return len;
     }
 
-    virtual size_t send(const void *buffer, size_t len)
+    virtual size_t send(const void *buffer, size_t len)override
     {
         sent_last = true;
         send_buffer.append((const char*)buffer, len);

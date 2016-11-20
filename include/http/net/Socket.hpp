@@ -14,7 +14,9 @@ namespace http
     {
     public:
         Socket() {}
+        Socket(Socket&&)=default;
         virtual ~Socket() {}
+        Socket& operator = (Socket&&)=default;
 
         /**Get the underlaying socket.*/
         virtual SOCKET get() = 0;
@@ -22,8 +24,15 @@ namespace http
          * Includes the port number and may use a hostname or ip address.
          */
         virtual std::string address_str()const = 0;
+        /**Close the socket, without waiting for a clean disconnect.*/
+        virtual void close() = 0;
         /**Disconnect this socket if connected. Sending and receiving will fail after.*/
         virtual void disconnect() = 0;
+        /**True if the socket has locally cached data pending recv.
+         * Because this data is locally cached, and not pending OS data, it will not trigger
+         * a read on select() or similar low-level network API's.
+         */
+        virtual bool recv_pending()const { return false; }
         /**Receive up to len bytes. Works like Berkeley `recv`.*/
         virtual size_t recv(void *buffer, size_t len) = 0;
         /**Send up to len bytes. Works like Berkeley `send`.*/

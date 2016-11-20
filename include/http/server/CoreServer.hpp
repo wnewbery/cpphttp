@@ -60,6 +60,20 @@ namespace http
             bool tls;
             std::string tls_hostname;
         };
+        // TODO: Refactor. On Windows can use events, on Linux can use pipes
+        class SignalSocket
+        {
+        public:
+            SignalSocket();
+            ~SignalSocket();
+            void create();
+            void destroy();
+            void signal();
+            SOCKET get();
+        private:
+            SOCKET send;
+            SOCKET recv;
+        };
         class Thread
         {
         public:
@@ -74,19 +88,9 @@ namespace http
             std::atomic<bool> running;
             CoreServer *server;
             std::unique_ptr<Socket> socket;
-        };
-        class SignalSocket
-        {
-        public:
-            SignalSocket();
-            ~SignalSocket();
-            void create();
-            void destroy();
-            void signal();
-            SOCKET get();
-        private:
-            SOCKET send;
-            SOCKET recv;
+#ifndef _WIN32
+            SignalSocket exit_socket;
+#endif
         };
 
         std::vector<Listener> listeners;

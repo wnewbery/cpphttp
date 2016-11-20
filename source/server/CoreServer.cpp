@@ -84,7 +84,7 @@ namespace http
 
             // (int)max is safe. Even if MS changes the implementation to return higher value sockets,
             // Windows select ignores this parameter. On Linux file descriptors are of type int.
-            auto ret = select((int)max, &read_set, nullptr, nullptr, nullptr);
+            auto ret = select((int)max + 1, &read_set, nullptr, nullptr, nullptr);
             if (ret < 0) throw SocketError(last_net_error());
             if (FD_ISSET(exit_socket.get(), &read_set)) break;
             for (auto &listener : listeners)
@@ -96,6 +96,10 @@ namespace http
             }
         }
         // Exiting, wait for workers and clean up
+#ifndef _WIN32
+        for (auto &thread : threads)
+            thread.exit_socket.signal();
+#endif
         for (auto &thread : threads)
             if (thread.thread.joinable())
                 thread.thread.join();
@@ -133,6 +137,9 @@ namespace http
     CoreServer::Thread::Thread(CoreServer *server, Listener *listener, TcpSocket &&socket)
         : thread(), running(true), server(server), socket()
     {
+#ifndef _WIN32
+        exit_socket.create();
+#endif
         if (listener->tls)
         {
             thread = std::thread(&CoreServer::Thread::main_tls, this, listener, std::move(socket));
@@ -144,26 +151,12 @@ namespace http
     }
     CoreServer::Thread::~Thread() {}
 
-    template<class F>
-    void CoreServer::Thread::main_wrap(F f)
-    {
-        try
-        {
-            set_thread_name("http::CoreServer worker");
-            f();
-            running = false;
-        }
-        catch (const std::exception &)
-        {
-            running = false;
-        }
-    }
     void CoreServer::Thread::main_tcp(TcpSocket &&new_socket)
     {
         try
         {
             set_thread_name("http::CoreServer worker");
-            socket = std::make_unique<TcpSocket>(std::move(new_socket));
+            socket.reset(new TcpSocket(std::move(new_socket)));
             run();
             running = false;
         }
@@ -178,7 +171,7 @@ namespace http
         {
             set_thread_name("http::CoreServer worker");
             //TODO: Make an asyncronous TLS negotiation
-            socket = std::make_unique<TlsServerSocket>(std::move(new_socket), listener->tls_hostname);
+            socket.reset(new TlsServerSocket(std::move(new_socket), listener->tls_hostname));
             run();
             running = false;
         }
@@ -195,15 +188,18 @@ namespace http
         RequestParser parser;
         while (true)
         {
+            if (!buffer_len && !socket->recv_pending())
             {
                 fd_set read_set;
-                auto max = set_fdset_v(read_set, server->exit_socket.get(), socket->get());
-                auto ret = select(max, &read_set, nullptr, nullptr, nullptr);
+#ifdef _WIN32
+                auto &exit_socket = server->exit_socket;
+#endif
+                auto max = set_fdset_v(read_set, exit_socket.get(), socket->get());
+                auto ret = select(max + 1, &read_set, nullptr, nullptr, nullptr);
                 if (ret <= 0) throw std::runtime_error("select failed");
-                if (FD_ISSET(server->exit_socket.get(), &read_set)) break;
+                if (FD_ISSET(exit_socket.get(), &read_set)) break;
                 assert(FD_ISSET(socket->get(), &read_set));
             }
-
 
             //Start request
             //TODO: Idle timeout
@@ -219,7 +215,7 @@ namespace http
                     auto recved = socket->recv(buffer + buffer_len, sizeof(buffer) - buffer_len);
                     if (!recved)
                     {
-                        if (parser.state() == BaseParser::START) return;
+                        if (parser.state() == BaseParser::START) break;
                         else throw std::runtime_error("Unexpected client disconnect");
                     }
                     buffer_len += recved;
@@ -264,7 +260,6 @@ namespace http
             {
                 resp.status.msg = default_status_msg(resp.status.code);
             }
-
             //Send response
             send_response(socket.get(), parser.method(), resp);
         }
@@ -283,7 +278,7 @@ namespace http
 
         TcpListenSocket listen("127.0.0.1", 0);
         sockaddr_in addr;
-        int len = (int)sizeof(addr);
+        auto len = (socklen_t)sizeof(addr);
         getsockname(listen.get(), (sockaddr*)&addr, &len);
 
         send = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

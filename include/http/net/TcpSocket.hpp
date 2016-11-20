@@ -41,6 +41,7 @@ namespace http
         const std::string &host()const { return _host; }
         /**Get the remote port number.*/
         uint16_t port()const { return _port;; }
+        virtual void close()override;
         virtual void disconnect()override;
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;

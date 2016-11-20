@@ -15,6 +15,7 @@ namespace http
     //http::init_net, Net.cpp
     extern SSL_CTX* openssl_ctx;
     extern const SSL_METHOD *openssl_method;
+    extern const SSL_METHOD *openssl_server_method;
 
     std::string openssl_err_str(SSL *ssl, int error)
     {
@@ -42,7 +43,6 @@ namespace http
     }
     OpenSslSocket::~OpenSslSocket()
     {
-        if (tcp.get_socket() != INVALID_SOCKET) disconnect();
     }
 
     void OpenSslSocket::connect(const std::string &host, uint16_t port)
@@ -67,10 +67,24 @@ namespace http
     {
         return tcp.check_recv_disconnect();
     }
+    void OpenSslSocket::close()
+    {
+        tcp.close();
+    }
     void OpenSslSocket::disconnect()
     {
-        if (ssl) SSL_shutdown(ssl.get());
+        if (ssl)
+        {
+            if (SSL_shutdown(ssl.get()) == 0)
+            {
+                SSL_shutdown(ssl.get()); // Wait for other party
+            }
+        }
         tcp.disconnect();
+    }
+    bool OpenSslSocket::recv_pending()const
+    {
+        return SSL_pending(ssl.get()) > 0;
     }
     size_t OpenSslSocket::recv(void *buffer, size_t len)
     {
@@ -83,5 +97,27 @@ namespace http
         auto len2 = SSL_write(ssl.get(), (const char*)buffer, (int)len);
         if (len2 < 0) throw OpenSslSocketError(ssl.get(), len2);
         return (size_t)len2;
+    }
+
+    OpenSslServerSocket::OpenSslServerSocket(TcpSocket &&socket, const std::string &cert_hostname)
+        : OpenSslSocket()
+    {
+        openssl_ctx.reset(SSL_CTX_new(openssl_server_method));
+        if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
+
+        SSL_CTX_set_ecdh_auto(openssl_ctx.get(), 1);
+        if (SSL_CTX_use_certificate_file(openssl_ctx.get(), (cert_hostname + ".crt").c_str(), SSL_FILETYPE_PEM) < 0)
+            throw std::runtime_error("Failed to use " + cert_hostname + ".crt");
+
+        if (SSL_CTX_use_PrivateKey_file(openssl_ctx.get(), (cert_hostname + ".key").c_str(), SSL_FILETYPE_PEM) < 0)
+            throw std::runtime_error("Failed to use " + cert_hostname + ".key");
+        
+        tcp = std::move(socket);
+
+        ssl.reset(SSL_new(openssl_ctx.get()));
+        SSL_set_fd(ssl.get(), tcp.get_socket());
+
+        if (SSL_accept(ssl.get()) <= 0)
+            throw std::runtime_error("SSL_accept failed");
     }
 }

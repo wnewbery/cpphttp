@@ -4,7 +4,6 @@
 #include "server/CoreServer.hpp"
 #include "Response.hpp"
 #include "../TestThread.hpp"
-#include <iostream>
 #include <thread>
 
 using namespace http;
@@ -39,6 +38,7 @@ BOOST_AUTO_TEST_CASE(success)
     Server server;
     server.add_tcp_listener("127.0.0.1", BASE_PORT + 0);
     server.add_tls_listener("127.0.0.1", BASE_PORT + 1, "localhost");
+    server.add_tls_listener("127.0.0.1", BASE_PORT + 2, "wrong-hostname");
 
     TestThread server_thread(std::bind(&Server::run, &server));
 
@@ -56,7 +56,6 @@ BOOST_AUTO_TEST_CASE(success)
         BOOST_CHECK_EQUAL(200, resp.status.code);
         BOOST_CHECK_EQUAL("OK", resp.body);
     }
-
     {
         // https:// - TLS
         http::Request req;
@@ -69,7 +68,6 @@ BOOST_AUTO_TEST_CASE(success)
         BOOST_CHECK_EQUAL(200, resp.status.code);
         BOOST_CHECK_EQUAL("OK", resp.body);
     }
-
     {
         // Expected to fail since cant validate the certificate
         http::Request req;
@@ -77,10 +75,10 @@ BOOST_AUTO_TEST_CASE(success)
         req.headers.add("Host", "localhost");
         req.raw_url = "/index.html";
         BOOST_CHECK_THROW(
-            http::Client("127.0.0.1", BASE_PORT + 1, true, &socket_factory).make_request(req),
+            http::Client("127.0.0.1", BASE_PORT + 2, true, &socket_factory).make_request(req),
             std::runtime_error);
     }
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     server.exit();
     server_thread.join();
 }

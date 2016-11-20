@@ -60,6 +60,8 @@ namespace http
 {
     SSL_CTX* openssl_ctx;
     const SSL_METHOD *openssl_method;
+    SSL_CTX* openssl_server_ctx;
+    const SSL_METHOD *openssl_server_method;
     std::vector<pthread_mutex_t> openssl_mutexes;
     static unsigned long openssl_thread_id(void)
     {
@@ -81,12 +83,17 @@ namespace http
     void init_net()
     {
         SSL_load_error_strings(); //OpenSSL SSL error strings
-
         OpenSSL_add_ssl_algorithms();
+
+        // Client
         openssl_method = SSLv23_client_method();//TLS_client_method();
         openssl_ctx = SSL_CTX_new(openssl_method);
         if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
-
+        // Server
+        openssl_server_method = SSLv23_server_method();
+        openssl_server_ctx = SSL_CTX_new(openssl_server_method);
+        if (!openssl_server_ctx) throw std::runtime_error("SSL_CTX_new failed");
+        // Multithreading
         openssl_mutexes.resize(CRYPTO_num_locks(), PTHREAD_MUTEX_INITIALIZER);
         CRYPTO_set_id_callback(openssl_thread_id);
         CRYPTO_set_locking_callback(openssl_locking_callback);

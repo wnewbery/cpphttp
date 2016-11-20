@@ -10,7 +10,7 @@ OBJ_DIR := obj/lib
 TEST_OBJ_DIR := obj/tests
 BIN_DIR := bin
 
-SOURCES := $(shell find source/ -name "*.cpp" ! -name "SchannelSocket.cpp")
+SOURCES := $(shell find source/ -name "*.cpp" ! \( -name "SchannelSocket.cpp" -or -name "SchannelServerSocket.cpp" -or -name "SchannelListenSocket.cpp" \) )
 TEST_SOURCES := $(shell find tests/ -name "*.cpp")
 
 OBJECTS := $(patsubst %, $(OBJ_DIR)/%.o, $(SOURCES))

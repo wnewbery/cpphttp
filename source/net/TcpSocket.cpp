@@ -21,7 +21,7 @@ namespace http
     }
     TcpSocket::~TcpSocket()
     {
-        disconnect();
+        close();
     }
 
     TcpSocket::TcpSocket(TcpSocket &&mv)
@@ -82,6 +82,7 @@ namespace http
 
         auto ret = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &result.p);
         if (ret) throw ConnectionError(host, port);
+        assert(result.p);
 
         int last_error = 0;
         for (auto p = result.p; p; p = p->ai_next)
@@ -111,10 +112,28 @@ namespace http
         if (socket != INVALID_SOCKET) return _host + ":" + std::to_string(_port);
         else return "Not connected";
     }
+    void TcpSocket::close()
+    {
+        if (socket != INVALID_SOCKET)
+        {
+            closesocket(socket);
+            socket = INVALID_SOCKET;
+        }
+    }
     void TcpSocket::disconnect()
     {
         if (socket != INVALID_SOCKET)
         {
+            shutdown(socket, SD_SEND);
+            fd_set set;
+            FD_ZERO(&set);
+            FD_SET(socket, &set);
+            timeval timeout = {1, 0};
+            // Give the remote a chance to send its FIN response
+            select(socket + 1, &set, nullptr, nullptr, &timeout);
+            //char buffer[1];
+            //FD_ISSET(socket, &set) ::recv(socket, buffer, 1, 0) == 0)
+            
             closesocket(socket);
             socket = INVALID_SOCKET;
         }

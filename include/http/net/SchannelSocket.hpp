@@ -33,8 +33,13 @@ namespace http
 
         virtual SOCKET get()override { return tcp.get(); }
         virtual std::string address_str()const override;
+        virtual void close()override;
         virtual void disconnect()override;
         virtual bool check_recv_disconnect()override;
+        virtual bool recv_pending()const override
+        {
+            return !recv_encrypted_buffer.empty() || !recv_decrypted_buffer.empty();
+        }
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
     protected:

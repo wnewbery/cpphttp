@@ -139,6 +139,12 @@ namespace http
     {
         return tcp.check_recv_disconnect();
     }
+    void SchannelSocket::close()
+    {
+        tcp.close();
+        context.reset();
+        credentials.reset();
+    }
     void SchannelSocket::disconnect()
     {
         // Apply SCHANNEL_SHUTDOWN
