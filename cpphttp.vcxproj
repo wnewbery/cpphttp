@@ -121,6 +121,7 @@
     <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\headers\Accept.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
+    <ClInclude Include="include\http\net\OpenSslListenSocket.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
     <ClInclude Include="include\http\net\Net.hpp" />
     <ClInclude Include="include\http\net\OpenSslSocket.hpp" />
@@ -155,6 +156,12 @@
     <ClCompile Include="source\headers\Accept.cpp" />
     <ClCompile Include="source\Method.cpp" />
     <ClCompile Include="source\net\Net.cpp" />
+    <ClCompile Include="source\net\OpenSslListenSocket.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="source\net\OpenSslSocket.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
