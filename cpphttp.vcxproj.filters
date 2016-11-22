@@ -215,7 +215,7 @@
     <ClCompile Include="source\net\OpenSslListenSocket.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
-    <ClCompile Include="source\net\CertStore.cpp">
+    <ClCompile Include="source\net\Cert.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
   </ItemGroup>

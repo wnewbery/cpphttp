@@ -395,12 +395,20 @@ namespace http
             //fatal error
             else if (FAILED(status))
             {
-                throw NetworkError("TLS handshake failed with " + std::to_string(status));
+                switch (status)
+                {
+                case SEC_E_WRONG_PRINCIPAL:
+                case SEC_E_UNTRUSTED_ROOT:
+                case SEC_E_CERT_EXPIRED:
+                    throw CertificateVerificationError(tcp.host(), tcp.port());
+                default:
+                    throw ConnectionError("TLS handshake failed with " + std::to_string(status), tcp.host(), tcp.port());
+                }
             }
             //server wants credentials, but not supported
             else if (status == SEC_I_INCOMPLETE_CREDENTIALS)
             {
-                throw NetworkError("TLS server requested client certificate, which is not supported");
+                throw ConnectionError("TLS server requested client certificate, which is not supported", tcp.host(), tcp.port());
             }
             //Move any spare input to the start of the buffer then loop
             else
