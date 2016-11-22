@@ -1,5 +1,6 @@
 #include "net/SchannelSocket.hpp"
 #include "net/Net.hpp"
+#include "net/Cert.hpp"
 #include "Schannel.hpp"
 #include "String.hpp"
 #include <cassert>
@@ -9,7 +10,7 @@ namespace http
 {
     extern SecurityFunctionTableW *sspi; //http::init_net, Net.cpp
 
-    namespace
+    /*namespace
     {
         struct CertContext
         {
@@ -67,30 +68,30 @@ namespace http
             throw std::runtime_error("Failed to find server certificate");
         }
         #pragma warning(pop)
-    }
+    }*/
 
-    SchannelServerSocket::SchannelServerSocket(TcpSocket &&socket, const std::string &cert_hostname)
+    SchannelServerSocket::SchannelServerSocket(TcpSocket &&socket, const PrivateCert &cert)
         : SchannelSocket(std::move(socket))
     {
         server = true;
-        tls_accept(cert_hostname);
+        tls_accept(cert);
     }
 
-    void SchannelServerSocket::tls_accept(const std::string &cert_hostname)
+    void SchannelServerSocket::tls_accept(const PrivateCert &cert)
     {
-        server_handshake(cert_hostname);
+        server_handshake(cert);
         alloc_buffers();
     }
-    void SchannelServerSocket::server_handshake(const std::string &cert_hostname)
+    void SchannelServerSocket::server_handshake(const PrivateCert &cert)
     {
         // Get server certificate
         // TODO: Accept hostname, store, etc., as config
-        auto cert = get_client_cert_by_host(cert_hostname);
+        auto cert_ctx = (PCCERT_CONTEXT)cert.get();
         TimeStamp expiry;
         SCHANNEL_CRED cred = {0};
         cred.dwVersion = SCHANNEL_CRED_VERSION;
         cred.cCreds = 1;
-        cred.paCred = &cert.handle;
+        cred.paCred = &cert_ctx;
         cred.grbitEnabledProtocols = SP_PROT_TLS1_2_SERVER;
         cred.dwFlags = SCH_USE_STRONG_CRYPTO;
 

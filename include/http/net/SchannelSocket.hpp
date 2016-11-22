@@ -7,6 +7,7 @@
 #include <memory>
 namespace http
 {
+    class PrivateCert;
     /**TLS secure socket using the Window's Secure Channel.*/
     class SchannelSocket : public Socket
     {
@@ -106,12 +107,12 @@ namespace http
     public:
         /**Construct by taking ownership of an existing socket.*/
         SchannelServerSocket() {}
-        SchannelServerSocket(TcpSocket &&socket, const std::string &cert_hostname);
+        SchannelServerSocket(TcpSocket &&socket, const PrivateCert &cert);
         SchannelServerSocket(SchannelServerSocket &&mv) = default;
         SchannelServerSocket& operator = (SchannelServerSocket &&mv) = default;
     protected:
-        void tls_accept(const std::string &cert_hostname);
-        void server_handshake(const std::string &cert_hostname);
+        void tls_accept(const PrivateCert &cert);
+        void server_handshake(const PrivateCert &cert);
         void server_handshake_loop();
     };
 }

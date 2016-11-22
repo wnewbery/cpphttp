@@ -130,6 +130,7 @@
     <ClInclude Include="include\http\net\Socket.hpp" />
     <ClInclude Include="include\http\net\TcpListenSocket.hpp" />
     <ClInclude Include="include\http\net\TcpSocket.hpp" />
+    <ClInclude Include="include\http\net\Cert.hpp" />
     <ClInclude Include="include\http\net\TlsListenSocket.hpp" />
     <ClInclude Include="include\http\net\TlsSocket.hpp" />
     <ClInclude Include="include\http\Request.hpp" />
@@ -155,6 +156,7 @@
     <ClCompile Include="source\Headers.cpp" />
     <ClCompile Include="source\headers\Accept.cpp" />
     <ClCompile Include="source\Method.cpp" />
+    <ClCompile Include="source\net\CertStore.cpp" />
     <ClCompile Include="source\net\Net.cpp" />
     <ClCompile Include="source\net\OpenSslListenSocket.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

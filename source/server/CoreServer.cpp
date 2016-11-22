@@ -3,6 +3,7 @@
 #include "core/ParserUtils.hpp"
 #include "core/Writer.hpp"
 #include "net/Net.hpp"
+#include "net/Cert.hpp"
 #include "net/TcpListenSocket.hpp"
 #include "net/TcpSocket.hpp"
 #include "net/TlsSocket.hpp"
@@ -10,6 +11,7 @@
 #include "Error.hpp"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 namespace http
 {
@@ -41,22 +43,24 @@ namespace http
         }
     }
     CoreServer::~CoreServer()
-    {}
+    {
+        exit();
+    }
 
     void CoreServer::add_tcp_listener(const std::string &bind, uint16_t port)
     {
         Listener listener = {
             {bind, port},
-            false, std::string()
+            false, {}
         };
         listener.socket.set_non_blocking();
         listeners.push_back(std::move(listener));
     }
-    void CoreServer::add_tls_listener(const std::string &bind, uint16_t port, const std::string &hostname)
+    void CoreServer::add_tls_listener(const std::string &bind, uint16_t port, const PrivateCert &cert)
     {
         Listener listener = {
             {bind, port},
-            true, hostname
+            true, cert
         };
         listener.socket.set_non_blocking();
         listeners.push_back(std::move(listener));
@@ -108,9 +112,13 @@ namespace http
     }
     void CoreServer::exit()
     {
-        exit_socket.signal();
-        // Clean up is done by run(). Wait for it.
-        std::unique_lock<std::mutex> lock(running_mutex);
+        std::unique_lock<std::mutex> lock(running_mutex, std::try_to_lock);
+        if (!lock)
+        {
+            exit_socket.signal();
+            // Clean up is done by run(). Wait for it.
+            lock.lock();
+        }
     }
     void CoreServer::accept(Listener &listener)
     {
@@ -160,9 +168,10 @@ namespace http
             run();
             running = false;
         }
-        catch (const std::exception &)
+        catch (const std::exception &e)
         {
             running = false;
+            std::cerr << "Worker exception: " << e.what() << std::endl;
         }
     }
     void CoreServer::Thread::main_tls(Listener *listener, TcpSocket &&new_socket)
@@ -171,13 +180,14 @@ namespace http
         {
             set_thread_name("http::CoreServer worker");
             //TODO: Make an asyncronous TLS negotiation
-            socket.reset(new TlsServerSocket(std::move(new_socket), listener->tls_hostname));
+            socket.reset(new TlsServerSocket(std::move(new_socket), listener->tls_cert));
             run();
             running = false;
         }
-        catch (const std::exception &)
+        catch (const std::exception &e)
         {
             running = false;
+            std::cerr << "Worker exception: " << e.what() << std::endl;
         }
     }
 

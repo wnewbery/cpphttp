@@ -12,25 +12,39 @@ class TestThread : public std::thread
 {
 public:
     template<class F>
-    TestThread(F func)
-        : std::thread([func]() -> void {
-        try
+    static auto wrap(F func)
+    {
+        return [func]() -> void
         {
-            func();
-        }
-        catch (const std::exception &e)
-        {
-            BOOST_ERROR(std::string("Unexpected exception: ") + e.what());
-        }
-    })
-    {}
+            try
+            {
+                func();
+            }
+            catch (const std::exception &e)
+            {
+                BOOST_ERROR(std::string("Unexpected exception: ") + e.what());
+            }
+        };
+    }
+
+    TestThread() : std::thread() {}
+    template<class F>
+    TestThread(F func) : std::thread(wrap(func)) {}
+
+    TestThread& operator = (TestThread &&mv)
+    {
+        std::thread::operator=(std::move(mv));
+        return *this;
+    }
     ~TestThread()
     {
         if (joinable())
         {
             auto &&handle = native_handle();
 #ifdef _WIN32
-            if (WaitForSingleObject(handle, 1000) != WAIT_OBJECT_0)
+            if (WaitForSingleObject(handle, 1000) == WAIT_OBJECT_0)
+                join();
+            else
             {
                 BOOST_ERROR("Forcefully terminating test child thread");
                 TerminateThread(handle, (DWORD)-1);

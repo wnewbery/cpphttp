@@ -27,8 +27,6 @@ namespace http
          * The remote address object is used to populate the host and port.
          */
         void set_socket(SOCKET socket, const sockaddr *address);
-        /**Gets the internal SOCKET object.*/
-        SOCKET get_socket() { return socket; }
         /**Create a new client side connection to a remote host or port.
          * Host can either be a hostname or an IP address.
          */

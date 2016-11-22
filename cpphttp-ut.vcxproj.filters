@@ -67,6 +67,9 @@
     <ClCompile Include="tests\server\CoreServer.cpp">
       <Filter>source\server</Filter>
     </ClCompile>
+    <ClCompile Include="tests\net\CertStore.cpp">
+      <Filter>source\net</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\TestSocket.hpp">

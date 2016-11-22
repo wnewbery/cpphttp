@@ -1,5 +1,6 @@
 #pragma once
 #include "../net/TcpListenSocket.hpp"
+#include "../net/Cert.hpp"
 #include <atomic>
 #include <list>
 #include <memory>
@@ -36,7 +37,7 @@ namespace http
         /**Add a listener before calling run.*/
         void add_tcp_listener(const std::string &bind, uint16_t port);
         /**Add a TLS listener before calling run.*/
-        void add_tls_listener(const std::string &bind, uint16_t port, const std::string &hostname);
+        void add_tls_listener(const std::string &bind, uint16_t port, const PrivateCert &cert);
         void run();
         /**Signals the thread in run() and all workers to exit, then waits for them.*/
         void exit();
@@ -58,7 +59,7 @@ namespace http
         {
             TcpListenSocket socket;
             bool tls;
-            std::string tls_hostname;
+            PrivateCert tls_cert;
         };
         // TODO: Refactor. On Windows can use events, on Linux can use pipes
         class SignalSocket

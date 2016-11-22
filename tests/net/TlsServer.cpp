@@ -1,6 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include "net/TlsListenSocket.hpp"
 #include "net/TlsSocket.hpp"
+#include "net/Cert.hpp"
 #include "net/Net.hpp"
 #include "../TestThread.hpp"
 #include <thread>
@@ -13,7 +14,7 @@ static const uint16_t BASE_PORT = 5000;
 
 void success_server_thread()
 {
-    TlsListenSocket listen("127.0.0.1", BASE_PORT, "localhost");
+    TlsListenSocket listen("127.0.0.1", BASE_PORT, load_pfx_cert("localhost.pfx", "password"));
 
     {
         auto sock = listen.accept();
@@ -71,7 +72,7 @@ BOOST_AUTO_TEST_CASE(success)
 
 void invalid_cert_hostname_server()
 {
-    TlsListenSocket listen("127.0.0.1", BASE_PORT + 1, "wrong-hostname");
+    TlsListenSocket listen("127.0.0.1", BASE_PORT + 1, load_pfx_cert("wrong-host.pfx", "password"));
     BOOST_CHECK_THROW(listen.accept(), std::exception);
 }
 BOOST_AUTO_TEST_CASE(invalid_cert_hostname)

@@ -130,10 +130,10 @@ namespace http
             FD_SET(socket, &set);
             timeval timeout = {1, 0};
             // Give the remote a chance to send its FIN response
-            select(socket + 1, &set, nullptr, nullptr, &timeout);
+            select((int)socket + 1, &set, nullptr, nullptr, &timeout);
             //char buffer[1];
             //FD_ISSET(socket, &set) ::recv(socket, buffer, 1, 0) == 0)
-            
+
             closesocket(socket);
             socket = INVALID_SOCKET;
         }

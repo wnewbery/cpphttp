@@ -2,6 +2,7 @@
 #include "client/Client.hpp"
 #include "client/SocketFactory.hpp"
 #include "server/CoreServer.hpp"
+#include "net/Cert.hpp"
 #include "Response.hpp"
 #include "../TestThread.hpp"
 #include <thread>
@@ -35,12 +36,13 @@ void success_server_thread(Server *server)
 }
 BOOST_AUTO_TEST_CASE(success)
 {
+    TestThread server_thread;
     Server server;
     server.add_tcp_listener("127.0.0.1", BASE_PORT + 0);
-    server.add_tls_listener("127.0.0.1", BASE_PORT + 1, "localhost");
-    server.add_tls_listener("127.0.0.1", BASE_PORT + 2, "wrong-hostname");
+    server.add_tls_listener("127.0.0.1", BASE_PORT + 1, load_pfx_cert("localhost.pfx", "password"));
+    server.add_tls_listener("127.0.0.1", BASE_PORT + 2, load_pfx_cert("wrong-host.pfx", "password"));
 
-    TestThread server_thread(std::bind(&Server::run, &server));
+    server_thread = TestThread(std::bind(&Server::run, &server));
 
     http::DefaultSocketFactory socket_factory;
 
@@ -75,7 +77,7 @@ BOOST_AUTO_TEST_CASE(success)
         req.headers.add("Host", "localhost");
         req.raw_url = "/index.html";
         BOOST_CHECK_THROW(
-            http::Client("127.0.0.1", BASE_PORT + 2, true, &socket_factory).make_request(req),
+            http::Client("localhost", BASE_PORT + 2, true, &socket_factory).make_request(req),
             std::runtime_error);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
