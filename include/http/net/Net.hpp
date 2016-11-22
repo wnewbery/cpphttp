@@ -88,4 +88,14 @@ namespace http
             return msg;
         }
     };
+    
+    /**Failed to verify the servers certificate.*/
+    class CertificateVerificationError : public ConnectionError
+    {
+    public:
+        CertificateVerificationError(const std::string &host, int port)
+            : ConnectionError("Certificate verification failed.", host, port)
+        {
+        }
+    };
 }

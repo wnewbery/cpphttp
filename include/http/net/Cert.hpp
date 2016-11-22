@@ -1,18 +1,27 @@
 #pragma once
 #include <algorithm>
 #include <string>
+#ifndef _WIN32
+#   include <memory>
+#endif
 namespace http
 {
-
+    struct OpenSslPrivateCertData;
     /**A single private key and certificate used to authenticate a TLS server or client.*/
     class PrivateCert
     {
     public:
+    #ifdef _WIN32
+        /**PCCERT_CONTEXT*/
+        typedef const void *Native;
+    #else
+        typedef std::shared_ptr<OpenSslPrivateCertData> Native;
+    #endif
         PrivateCert() : native(nullptr) {}
-        explicit PrivateCert(const void *native) : native(native) { }
+        explicit PrivateCert(Native native) : native(native) { }
         PrivateCert(const PrivateCert &cp) : native(dup(cp.native)) { }
-        PrivateCert(PrivateCert &&mv) : native(mv.native) { mv.native = nullptr; }
-        ~PrivateCert() { if (native) free(native); }
+        PrivateCert(PrivateCert &&mv);
+        ~PrivateCert();
 
         PrivateCert& operator = (const PrivateCert &cp)
         {
@@ -30,12 +39,12 @@ namespace http
         {
             return native != nullptr;
         }
-        const void *get()const { return native; }
+        Native get()const { return native; }
     private:
-        const void *native;
+        Native native;
 
-        static void free(const void *native);
-        static const void* dup(const void *native);
+        static void free(Native native);
+        static Native dup(Native native);
     };
 
     /**Load a certificate with private key from a PKCS#12 archive.*/

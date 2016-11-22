@@ -5,10 +5,17 @@
 #   include <memory>
 #   include <vector>
 #else
+#   include "net/OpenSslCert.hpp"
+#   include <openssl/pem.h>
+#   include <openssl/err.h>
+#   include <openssl/pkcs12.h>
+#   include <cstdio>
 #endif
 
 namespace http
 {
+    PrivateCert::PrivateCert(PrivateCert &&mv) : native(mv.native) { mv.native = nullptr; }
+    PrivateCert::~PrivateCert() { if (native) free(native); }
 #ifdef _WIN32
     namespace
     {
@@ -156,6 +163,61 @@ namespace http
         return cert;
     }
 #else
+    struct File
+    {
+        FILE *f;
+        File(const std::string &file_name)
+          : f(fopen(file_name.c_str(), "rb"))
+        {
+            if (!f) throw std::runtime_error("Failed to open certificate file " + file_name);
+        }
+        ~File()
+        {
+            if (f) fclose(f);
+        }
+    };
+    struct OpenSslDeleter
+    {
+        void operator()(PKCS12 *pfx)const { PKCS12_free(pfx); }
+    };
+    
+    OpenSslPrivateCertData::~OpenSslPrivateCertData()
+    {
+        EVP_PKEY_free(pkey);
+        X509_free(cert);
+        sk_X509_pop_free(ca, X509_free);
+    }
 
+    void PrivateCert::free(std::shared_ptr<OpenSslPrivateCertData> native)
+    {
+    }
+    std::shared_ptr<OpenSslPrivateCertData> PrivateCert::dup(std::shared_ptr<OpenSslPrivateCertData> native)
+    {
+        return native;
+    }
+
+    PrivateCert load_pfx_cert(const std::string &file_name, const std::string &password)
+    {
+        File f(file_name);
+
+        std::unique_ptr<PKCS12,OpenSslDeleter> pfx(d2i_PKCS12_fp(f.f, nullptr));
+        if (!pfx) throw std::runtime_error("Failed to read pfx certificate " + file_name);
+
+        auto data = std::make_shared<OpenSslPrivateCertData>();
+        if (!PKCS12_parse(pfx.get(), password.c_str(), &data->pkey, &data->cert, &data->ca))
+            throw std::runtime_error("Failed to parse pfx certificate " + file_name);
+
+        PrivateCert out(data); // For RAII
+
+        if (!data->pkey || !data->cert)
+            throw std::runtime_error(file_name + " did not contain key and certificate");
+
+        return out;
+    }
+
+    PrivateCert load_pem_priv_cert(const std::string &crt_file, const std::string &key_file)
+    {
+        std::terminate();
+    }
 #endif
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "TcpListenSocket.hpp"
+#include "net/Cert.hpp"
 namespace http
 {
     class OpenSslServerSocket;
@@ -11,16 +12,16 @@ namespace http
          * The host name is used to select a certificate from the users personal certificate store
          * by a matching common name.
          */
-        OpenSslListenSocket(const std::string &bind, uint16_t port, const std::string &cert_hostname);
+        OpenSslListenSocket(const std::string &bind, uint16_t port, const PrivateCert &cert);
         /**Listen on a port for all interfaces.*/
-        explicit OpenSslListenSocket(uint16_t port, const std::string &cert_hostname)
-            : OpenSslListenSocket("0.0.0.0", port, cert_hostname) {}
+        explicit OpenSslListenSocket(uint16_t port, const PrivateCert &cert)
+            : OpenSslListenSocket("0.0.0.0", port, cert) {}
         OpenSslListenSocket()=default;
 
         /**Blocks awaiting the next inbound connection, then returns it as a TcpSocket object.*/
         OpenSslServerSocket accept();
     private:
         TcpListenSocket tcp;
-        std::string cert_hostname;
+        PrivateCert cert;
     };
 }

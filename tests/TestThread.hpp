@@ -1,5 +1,6 @@
 #pragma once
 #include <thread>
+#include <functional>
 #include <boost/test/unit_test.hpp>
 #ifdef _WIN32
 #   include <Windows.h>
@@ -12,7 +13,7 @@ class TestThread : public std::thread
 {
 public:
     template<class F>
-    static auto wrap(F func)
+    static std::function<void()> wrap(F func)
     {
         return [func]() -> void
         {
@@ -53,9 +54,11 @@ public:
 #else
             timespec time = { 1, 0 };
             void *retval;
-            if (pthread_timedjoin_np(handle, &retval, &time))
+            if (pthread_timedjoin_np(handle, &retval, &time) == 0)
+                detach();
+            else
             {
-                BOOST_ERROR("Forcefully terminating test child thread");
+                BOOST_ERROR("Forgetting test child thread");
                 //pthread_cancel(handle);
                 detach();
             }

@@ -55,6 +55,8 @@ namespace http
 #include <vector>
 #include <pthread.h>
 #include <signal.h>
+#include <iostream>
+#include <cstdlib>
 
 namespace http
 {
@@ -89,6 +91,9 @@ namespace http
         openssl_method = SSLv23_client_method();//TLS_client_method();
         openssl_ctx = SSL_CTX_new(openssl_method);
         if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
+        // Load default trust roots    
+        if (!SSL_CTX_set_default_verify_paths(openssl_ctx))
+            throw std::runtime_error("SSL_CTX_set_default_verify_paths failed");
         // Server
         openssl_server_method = SSLv23_server_method();
         openssl_server_ctx = SSL_CTX_new(openssl_server_method);

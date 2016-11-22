@@ -11,6 +11,7 @@
 
 namespace http
 {
+    class PrivateCert;
     /**Get a descriptive error string for an OpenSSL error code.*/
     std::string openssl_err_str(SSL *ssl, int error);
 
@@ -21,6 +22,10 @@ namespace http
         /**Create an error message using openssl_err_str.*/
         OpenSslSocketError(SSL *ssl, int error)
             : SocketError(openssl_err_str(ssl, error))
+        {
+        }
+        OpenSslSocketError(const std::string &msg, SSL *ssl, int error)
+            : SocketError(msg + ": " + openssl_err_str(ssl, error))
         {
         }
     };
@@ -65,7 +70,7 @@ namespace http
     class OpenSslServerSocket : public OpenSslSocket
     {
     public:
-        OpenSslServerSocket(TcpSocket &&socket, const std::string &cert_hostname);
+        OpenSslServerSocket(TcpSocket &&socket, const PrivateCert &cert);
         OpenSslServerSocket(const OpenSslServerSocket&)=delete;
         OpenSslServerSocket(OpenSslServerSocket&&)=default;
         OpenSslServerSocket& operator =(const OpenSslServerSocket&)=delete;

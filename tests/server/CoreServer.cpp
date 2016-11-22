@@ -3,6 +3,7 @@
 #include "client/SocketFactory.hpp"
 #include "server/CoreServer.hpp"
 #include "net/Cert.hpp"
+#include "net/Net.hpp"
 #include "Response.hpp"
 #include "../TestThread.hpp"
 #include <thread>
@@ -78,7 +79,7 @@ BOOST_AUTO_TEST_CASE(success)
         req.raw_url = "/index.html";
         BOOST_CHECK_THROW(
             http::Client("localhost", BASE_PORT + 2, true, &socket_factory).make_request(req),
-            std::runtime_error);
+            CertificateVerificationError);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     server.exit();

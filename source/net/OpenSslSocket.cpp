@@ -1,4 +1,6 @@
 #include "net/OpenSslSocket.hpp"
+#include "net/OpenSslCert.hpp"
+#include "net/Cert.hpp"
 
 #include <openssl/opensslconf.h>
 #include <openssl/crypto.h>
@@ -9,6 +11,8 @@
 #ifndef OPENSSL_THREADS
 #   error OPENSSL_THREADS required
 #endif
+
+#include <iostream>
 
 namespace http
 {
@@ -54,9 +58,16 @@ namespace http
         //Currently only supporting blocking sockets, so dont care about renegotiation details
         SSL_set_mode(ssl.get(), SSL_MODE_AUTO_RETRY);
 
-        SSL_set_fd(ssl.get(), tcp.get_socket());
+        SSL_set_fd(ssl.get(), tcp.get());
         auto err = SSL_connect(ssl.get());
         if (err < 0) throw OpenSslSocketError(ssl.get(), err);
+        
+        X509* cert = SSL_get_peer_certificate(ssl.get());
+        if(cert) { X509_free(cert); }
+        if(!cert) throw std::runtime_error(host + " did not send a TLS certificate");
+
+        if (SSL_get_verify_result(ssl.get()) != X509_V_OK)
+            throw CertificateVerificationError(host, port);
     }
 
     std::string OpenSslSocket::address_str()const
@@ -99,23 +110,27 @@ namespace http
         return (size_t)len2;
     }
 
-    OpenSslServerSocket::OpenSslServerSocket(TcpSocket &&socket, const std::string &cert_hostname)
+    OpenSslServerSocket::OpenSslServerSocket(TcpSocket &&socket, const PrivateCert &cert)
         : OpenSslSocket()
     {
         openssl_ctx.reset(SSL_CTX_new(openssl_server_method));
         if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
 
         SSL_CTX_set_ecdh_auto(openssl_ctx.get(), 1);
-        if (SSL_CTX_use_certificate_file(openssl_ctx.get(), (cert_hostname + ".crt").c_str(), SSL_FILETYPE_PEM) < 0)
-            throw std::runtime_error("Failed to use " + cert_hostname + ".crt");
+        
+        if (SSL_CTX_use_certificate(openssl_ctx.get(), cert.get()->cert) != 1)
+            throw std::runtime_error("SSL_CTX_use_certificate failed");
+        if (cert.get()->ca)
+            if (SSL_CTX_set0_chain(openssl_ctx.get(), cert.get()->ca) != 1)
+                throw std::runtime_error("SSL_CTX_set0_chain failed");
 
-        if (SSL_CTX_use_PrivateKey_file(openssl_ctx.get(), (cert_hostname + ".key").c_str(), SSL_FILETYPE_PEM) < 0)
-            throw std::runtime_error("Failed to use " + cert_hostname + ".key");
+        if (SSL_CTX_use_PrivateKey(openssl_ctx.get(), cert.get()->pkey) != 1)
+            throw std::runtime_error("SSL_CTX_use_PrivateKey failed");
         
         tcp = std::move(socket);
 
         ssl.reset(SSL_new(openssl_ctx.get()));
-        SSL_set_fd(ssl.get(), tcp.get_socket());
+        SSL_set_fd(ssl.get(), tcp.get());
 
         if (SSL_accept(ssl.get()) <= 0)
             throw std::runtime_error("SSL_accept failed");

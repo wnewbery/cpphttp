@@ -13,8 +13,8 @@ BOOST_AUTO_TEST_CASE(connect)
         "Host: willnewbery.co.uk\r\n"
         "\r\n";
     TlsSocket sock;
-    sock.connect("willnewbery.co.uk", 443);
-    BOOST_CHECK_EQUAL("willnewbery.co.uk:443", sock.address_str());
+    sock.connect("eve.willnewbery.co.uk", 443);
+    BOOST_CHECK_EQUAL("eve.willnewbery.co.uk:443", sock.address_str());
     sock.send_all((const uint8_t*)HTTP_REQ, strlen(HTTP_REQ));
 
     size_t total = 0;

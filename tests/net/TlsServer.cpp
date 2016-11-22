@@ -73,13 +73,18 @@ BOOST_AUTO_TEST_CASE(success)
 void invalid_cert_hostname_server()
 {
     TlsListenSocket listen("127.0.0.1", BASE_PORT + 1, load_pfx_cert("wrong-host.pfx", "password"));
-    BOOST_CHECK_THROW(listen.accept(), std::exception);
+    try
+    {
+        char buffer[1];
+        auto recved = listen.accept().recv(buffer, 1);
+        BOOST_CHECK_EQUAL(0, recved);
+    } catch(const std::exception &) {}
 }
 BOOST_AUTO_TEST_CASE(invalid_cert_hostname)
 {
     TestThread server(&invalid_cert_hostname_server);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    BOOST_CHECK_THROW(TlsSocket("localhost", BASE_PORT + 1), std::exception);
+    BOOST_CHECK_THROW(TlsSocket("localhost", BASE_PORT + 1).send_all("ping", 4), CertificateVerificationError);
     server.join();
 }
 
