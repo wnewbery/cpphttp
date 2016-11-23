@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(keep_alive)
     server_thread = TestThread(std::bind(&Server::run, &server));
 
     {
-        ClientConnection conn(std::make_unique<TcpSocket>("localhost", BASE_PORT + 3));
+        ClientConnection conn(std::unique_ptr<Socket>(new TcpSocket("localhost", BASE_PORT + 3)));
         Request req;
         req.method = GET;
         req.headers.add("Host", "localhost");
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(keep_alive)
     }
 
     {
-        ClientConnection conn(std::make_unique<TcpSocket>("localhost", BASE_PORT + 3));
+        ClientConnection conn(std::unique_ptr<Socket>(new TcpSocket("localhost", BASE_PORT + 3)));
         Request req;
         req.method = GET;
         req.headers.add("Host", "localhost");
