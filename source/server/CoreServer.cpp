@@ -8,6 +8,7 @@
 #include "net/TcpSocket.hpp"
 #include "net/TlsSocket.hpp"
 #include "util/Thread.hpp"
+#include "String.hpp"
 #include "Error.hpp"
 #include <cassert>
 #include <cstring>
@@ -196,7 +197,8 @@ namespace http
         char buffer[RequestParser::LINE_SIZE];
         size_t buffer_len = 0;
         RequestParser parser;
-        while (true)
+        bool keep_alive = true;
+        while (keep_alive)
         {
             if (!buffer_len && !socket->recv_pending())
             {
@@ -244,10 +246,13 @@ namespace http
                     parser.body()
                 };
 
+                keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
+
                 resp = server->handle_request(req);
             }
             catch (const ParserError &err)
             {
+                keep_alive = false;
                 int status = err.status_code();
                 if (status <= 0) status = 400;
                 resp.status.code = (StatusCode)status;
@@ -256,12 +261,14 @@ namespace http
             }
             catch (const ErrorResponse &err)
             {
+                keep_alive = false;
                 resp.status.code = (StatusCode)err.status_code();
                 resp.body = err.what();
                 resp.headers.add("Content-Type", "text/plain");
             }
             catch (const std::exception &err)
             {
+                keep_alive = false;
                 resp.status.code = SC_INTERNAL_SERVER_ERROR;
                 resp.body = err.what();
                 resp.headers.add("Content-Type", "text/plain");
@@ -270,9 +277,11 @@ namespace http
             {
                 resp.status.msg = default_status_msg(resp.status.code);
             }
+            resp.headers.set("Connection", keep_alive ? "keep-alive" : "close");
             //Send response
             send_response(socket.get(), parser.method(), resp);
         }
+        socket->disconnect();
     }
 
     CoreServer::SignalSocket::SignalSocket()

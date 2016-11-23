@@ -4,6 +4,7 @@
 #include "server/CoreServer.hpp"
 #include "net/Cert.hpp"
 #include "net/Net.hpp"
+#include "net/TcpSocket.hpp"
 #include "Response.hpp"
 #include "../TestThread.hpp"
 #include <thread>
@@ -81,9 +82,47 @@ BOOST_AUTO_TEST_CASE(success)
             http::Client("localhost", BASE_PORT + 2, true, &socket_factory).make_request(req),
             CertificateVerificationError);
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     server.exit();
     server_thread.join();
 }
 
+BOOST_AUTO_TEST_CASE(keep_alive)
+{
+    TestThread server_thread;
+    Server server;
+    server.add_tcp_listener("127.0.0.1", BASE_PORT + 3);
+
+    server_thread = TestThread(std::bind(&Server::run, &server));
+
+    {
+        ClientConnection conn(std::make_unique<TcpSocket>("localhost", BASE_PORT + 3));
+        Request req;
+        req.method = GET;
+        req.headers.add("Host", "localhost");
+        req.headers.add("Connection", "close");
+        req.raw_url = "/index.html";
+
+        auto resp = conn.make_request(req);
+        BOOST_CHECK_EQUAL("close", resp.headers.get("Connection"));
+
+        BOOST_CHECK_THROW(conn.make_request(req), std::runtime_error);
+    }
+
+    {
+        ClientConnection conn(std::make_unique<TcpSocket>("localhost", BASE_PORT + 3));
+        Request req;
+        req.method = GET;
+        req.headers.add("Host", "localhost");
+        req.headers.add("Connection", "keep-alive");
+        req.raw_url = "/index.html";
+
+        auto resp = conn.make_request(req);
+        BOOST_CHECK_EQUAL("keep-alive", resp.headers.get("Connection"));
+
+        BOOST_CHECK_NO_THROW(conn.make_request(req));
+    }
+
+    server.exit();
+    server_thread.join();
+}
 BOOST_AUTO_TEST_SUITE_END()

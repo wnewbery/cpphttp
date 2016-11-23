@@ -1,5 +1,20 @@
 #pragma once
 #include <string>
+namespace http
+{
+    inline bool ieq(const std::string &a, const std::string &b)
+    {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); ++i)
+        {
+            char ca = a[i], cb = b[i];
+            if (ca >= 'a' && ca <= 'z') ca = (char)(ca - 'a' + 'A');
+            if (cb >= 'a' && cb <= 'z') cb = (char)(cb - 'a' + 'A');
+            if (ca != cb) return false;
+        }
+        return true;
+    }
+}
 #ifdef _WIN32
 #include <codecvt>
 namespace http
