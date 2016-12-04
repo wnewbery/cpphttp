@@ -79,10 +79,11 @@ namespace http
 
     void SchannelServerSocket::tls_accept(const PrivateCert &cert)
     {
-        server_handshake(cert);
+        create_credentials(cert);
+        server_handshake_loop();
         alloc_buffers();
     }
-    void SchannelServerSocket::server_handshake(const PrivateCert &cert)
+    void SchannelServerSocket::create_credentials(const PrivateCert &cert)
     {
         // Get server certificate
         // TODO: Accept hostname, store, etc., as config
@@ -99,8 +100,6 @@ namespace http
             nullptr, UNISP_NAME, SECPKG_CRED_INBOUND, nullptr, &cred, nullptr, nullptr,
             &credentials.handle, &expiry);
         if (status != SEC_E_OK) throw std::runtime_error("Failed to convert PCCERT_CONTEXT to CredHandle");
-
-        server_handshake_loop();
     }
     void SchannelServerSocket::server_handshake_loop()
     {
@@ -195,6 +194,113 @@ namespace http
                     recv_encrypted_buffer.begin(),
                     recv_encrypted_buffer.begin() + recv_encrypted_buffer.size() - in_buffers[1].cbBuffer);
             }
+        }
+    }
+
+    void SchannelServerSocket::async_create(AsyncIo &aio, TcpSocket &&socket, const PrivateCert &cert,
+        std::function<void()> complete, AsyncIo::ErrorHandler error)
+    {
+        create_credentials(cert);
+        tcp = std::move(socket);
+        async_server_handshake_recv(aio, complete, error);
+    }
+    void SchannelServerSocket::async_server_handshake_recv(AsyncIo &aio, std::function<void()> complete, AsyncIo::ErrorHandler error)
+    {
+        auto p = recv_encrypted_buffer.size();
+        recv_encrypted_buffer.resize(p + 4096);
+        tcp.async_recv(aio, recv_encrypted_buffer.data() + p, 4096,
+            [this, &aio, p, complete, error](size_t len)
+            {
+                recv_encrypted_buffer.resize(p + len);
+                async_server_handshake_next(aio, complete, error);
+            },
+            error);
+    }
+    void SchannelServerSocket::async_server_handshake_next(AsyncIo &aio, std::function<void()> complete, AsyncIo::ErrorHandler error)
+    {
+        try
+        {
+            while (true)
+            {
+                SecBuffer in_buffers[2] = {
+                    { (DWORD)recv_encrypted_buffer.size(), SECBUFFER_TOKEN, recv_encrypted_buffer.data() },
+                    { 0, SECBUFFER_EMPTY, nullptr }
+                };
+                SecBufferDesc in_buffer_desc = { SECBUFFER_VERSION, 2, in_buffers };
+
+                SecBufferSingleAutoFree out_buffer;
+                out_buffer.buffer = { 0, SECBUFFER_TOKEN, nullptr };
+
+                // Call SSPI
+                TimeStamp expiry;
+                DWORD sspi_flags =
+                    ASC_REQ_SEQUENCE_DETECT |
+                    ASC_REQ_REPLAY_DETECT |
+                    ASC_REQ_CONFIDENTIALITY |
+                    ASC_REQ_EXTENDED_ERROR |
+                    ASC_REQ_ALLOCATE_MEMORY |
+                    ASC_REQ_STREAM;
+                DWORD sspi_out_flags;
+                auto status = sspi->AcceptSecurityContext(
+                    &credentials.handle,
+                    context ? &context.handle : nullptr, // Context after first call
+                    &in_buffer_desc, sspi_flags, 0,
+                    context ? nullptr : &context.handle, // Create new context on first call
+                    &out_buffer.desc, &sspi_out_flags, &expiry);
+
+                // Send requested output
+                if (status == SEC_E_OK || status == SEC_I_CONTINUE_NEEDED ||
+                    (FAILED(status) && (0 != (sspi_out_flags & ASC_RET_EXTENDED_ERROR))))
+                {
+                    if (out_buffer.buffer.cbBuffer && out_buffer.buffer.pvBuffer)
+                    {
+                        send_sec_buffers(out_buffer.desc); //TODO: Make async
+                        out_buffer.free();
+                    }
+                }
+                if (status == SEC_E_INCOMPLETE_MESSAGE)
+                {
+                    // Read more data and retry
+                    return async_server_handshake_recv(aio, complete, error);
+                }
+                else if (status == SEC_E_OK)
+                {
+                    // Completed
+                    // TODO: Check client certificate here
+                    // Might have read too much data before, so store for later
+                    if (in_buffers[1].BufferType == SECBUFFER_EXTRA)
+                    {
+                        auto &buf = in_buffers[1];
+                        auto p = (uint8_t*)out_buffer.buffer.pvBuffer;
+                        assert(recv_encrypted_buffer.size() >= buf.cbBuffer);
+                        assert(!buf.cbBuffer || p >= recv_encrypted_buffer.data() && p < recv_encrypted_buffer.data() + recv_encrypted_buffer.size());
+
+                        recv_encrypted_buffer.erase(
+                            recv_encrypted_buffer.begin(),
+                            recv_encrypted_buffer.begin() + recv_encrypted_buffer.size() - buf.cbBuffer);
+                    }
+                    else recv_encrypted_buffer.clear();
+                    alloc_buffers();
+                    return complete();
+                }
+                else if (FAILED(status))
+                {
+                    // Fatal error
+                    throw NetworkError("TLS server acccept handshake failed with " + std::to_string(status));
+                }
+                else
+                {
+                    // Not complete. Move any spare input to the start of the buffer then loop.
+                    assert(recv_encrypted_buffer.size() >= in_buffers[1].cbBuffer);
+                    recv_encrypted_buffer.erase(
+                        recv_encrypted_buffer.begin(),
+                        recv_encrypted_buffer.begin() + recv_encrypted_buffer.size() - in_buffers[1].cbBuffer);
+                }
+            }
+        }
+        catch (const std::exception &)
+        {
+            error();
         }
     }
 }

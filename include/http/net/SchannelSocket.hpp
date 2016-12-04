@@ -131,9 +131,13 @@ namespace http
         SchannelServerSocket(TcpSocket &&socket, const PrivateCert &cert);
         SchannelServerSocket(SchannelServerSocket &&mv) = default;
         SchannelServerSocket& operator = (SchannelServerSocket &&mv) = default;
+        void async_create(AsyncIo &aio, TcpSocket &&socket, const PrivateCert &cert,
+            std::function<void()> complete, AsyncIo::ErrorHandler error);
     protected:
         void tls_accept(const PrivateCert &cert);
-        void server_handshake(const PrivateCert &cert);
+        void create_credentials(const PrivateCert &cert);
         void server_handshake_loop();
+        void async_server_handshake_recv(AsyncIo &aio, std::function<void()> complete, AsyncIo::ErrorHandler error);
+        void async_server_handshake_next(AsyncIo &aio, std::function<void()> complete, AsyncIo::ErrorHandler error);
     };
 }

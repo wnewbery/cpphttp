@@ -32,14 +32,19 @@ namespace http
                 buffer_len = 0;
                 if (listener->tls)
                 {
-                    //TODO: Make this async/non-blocking
-                    socket = std::make_unique<TlsServerSocket>(std::move(raw_socket), listener->tls_cert);
+                    auto tls = new TlsServerSocket();
+                    socket.reset(tls);
+                    tls->async_create(server->aio, std::move(raw_socket), listener->tls_cert,
+                        [this]() { start_request(); },
+                        [this]() {
+                            delete this;
+                    });
                 }
                 else
                 {
                     socket = std::make_unique<TcpSocket>(std::move(raw_socket));
+                    start_request();
                 }
-                start_request();
             }
             catch (const std::exception &)
             {
