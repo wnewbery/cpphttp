@@ -38,6 +38,10 @@ namespace http
     {
         return WSAGetLastError();
     }
+    bool would_block(int err)
+    {
+        return err == WSAEWOULDBLOCK;
+    }
     std::string errno_string(int err)
     {
         char buffer[1024];
@@ -91,7 +95,7 @@ namespace http
         openssl_method = SSLv23_client_method();//TLS_client_method();
         openssl_ctx = SSL_CTX_new(openssl_method);
         if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
-        // Load default trust roots    
+        // Load default trust roots
         if (!SSL_CTX_set_default_verify_paths(openssl_ctx))
             throw std::runtime_error("SSL_CTX_set_default_verify_paths failed");
         // Server
@@ -110,6 +114,10 @@ namespace http
     int last_net_error()
     {
         return errno;
+    }
+    bool would_block(int err)
+    {
+        return err == EAGAIN || err == EWOULDBLOCK;
     }
     std::string errno_string(int err)
     {

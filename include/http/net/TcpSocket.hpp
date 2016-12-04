@@ -33,6 +33,8 @@ namespace http
         void connect(const std::string &host, uint16_t port);
 
         virtual SOCKET get()override { return socket; }
+        /**Sets this sockets non-blocking flag.*/
+        void set_non_blocking(bool non_blocking = true);
         /**Gets the remote address as a string in the form `host() + ':' + port()`.*/
         virtual std::string address_str()const override;
         /**Get the remote host name or IP address.*/
@@ -44,6 +46,14 @@ namespace http
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
         virtual bool check_recv_disconnect()override;
+        virtual void async_disconnect(AsyncIo &aio,
+            std::function<void()> handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_recv(AsyncIo &aio, void *buffer, size_t len,
+            AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
     private:
         SOCKET socket;
         std::string _host;

@@ -145,7 +145,8 @@ namespace http
         context.reset();
         credentials.reset();
     }
-    void SchannelSocket::disconnect()
+
+    void SchannelSocket::disconnect_message(SecBufferSingleAutoFree &buffer)
     {
         // Apply SCHANNEL_SHUTDOWN
         DWORD type = SCHANNEL_SHUTDOWN;
@@ -155,7 +156,6 @@ namespace http
         if (status != SEC_E_OK) throw std::runtime_error("ApplyControlToken failed");
 
         // Create a tls close notification message
-        SecBufferSingleAutoFree notify_buffer;
         TimeStamp expiry;
         DWORD sspi_out_flags;
 
@@ -169,22 +169,28 @@ namespace http
                 ASC_REQ_ALLOCATE_MEMORY |
                 ASC_REQ_STREAM;
             status = sspi->AcceptSecurityContext(&credentials.handle, &context.handle, nullptr,
-                sspi_flags, 0, nullptr, &notify_buffer.desc, &sspi_out_flags, &expiry);
+                sspi_flags, 0, nullptr, &buffer.desc, &sspi_out_flags, &expiry);
             if (status != SEC_E_OK) throw std::runtime_error("AcceptSecurityContext failed");
         }
         else
         {
             status = sspi->InitializeSecurityContextW(
                 &credentials.handle, &context.handle, nullptr, SSPI_FLAGS, 0,
-                SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &notify_buffer.desc,
+                SECURITY_NATIVE_DREP, nullptr, 0, &context.handle, &buffer.desc,
                 &sspi_out_flags, &expiry);
             if (status != SEC_E_OK) throw std::runtime_error("InitializeSecurityContext failed");
 
         }
+    }
+    void SchannelSocket::disconnect()
+    {
+        SecBufferSingleAutoFree notify_buffer;
+        disconnect_message(notify_buffer);
+
         // Send the message
         if (notify_buffer.buffer.pvBuffer && notify_buffer.buffer.cbBuffer)
         {
-            tcp.send_all((const uint8_t*)notify_buffer.buffer.pvBuffer, notify_buffer.buffer.cbBuffer);
+            tcp.send_all(notify_buffer.buffer.pvBuffer, notify_buffer.buffer.cbBuffer);
         }
 
         // Cleanup
@@ -192,31 +198,40 @@ namespace http
         credentials.reset();
         tcp.disconnect();
     }
-
-    size_t SchannelSocket::recv(void * vbytes, size_t len)
+    void SchannelSocket::async_disconnect(AsyncIo &aio,
+        std::function<void()> handler, AsyncIo::ErrorHandler error)
     {
-        if (!recv_decrypted_buffer.empty())
-        {   // Already had some data (last recv was less than SSPI decrypted)
-            auto len2 = std::min(len, recv_decrypted_buffer.size());
-            memcpy(vbytes, recv_decrypted_buffer.data(), len2);
-            recv_decrypted_buffer.erase(recv_decrypted_buffer.begin(), recv_decrypted_buffer.begin() + len2);
-            return len2;
+        try
+        {
+            auto notify_buffer = std::make_shared<SecBufferSingleAutoFree>();
+            disconnect_message(*notify_buffer);
+
+            tcp.async_send_all(aio, notify_buffer->buffer.pvBuffer, notify_buffer->buffer.cbBuffer,
+                [notify_buffer, handler](size_t) { handler(); },
+                [notify_buffer, error]() { error(); });
         }
-        auto bytes = (char*)vbytes;
-        bool do_read = recv_encrypted_buffer.size() < sec_sizes.cbBlockSize;
-        size_t len_out = 0;
+        catch (const std::exception &)
+        {
+            error();
+        }
+    }
+
+    size_t SchannelSocket::recv_cached(void *vbytes, size_t len)
+    {
+        if (recv_decrypted_buffer.empty()) return 0;
+        // Already had some data (last recv was less than SSPI decrypted)
+        auto len2 = std::min(len, recv_decrypted_buffer.size());
+        memcpy(vbytes, recv_decrypted_buffer.data(), len2);
+        recv_decrypted_buffer.erase(recv_decrypted_buffer.begin(), recv_decrypted_buffer.begin() + len2);
+        return len2;
+    }
+    bool SchannelSocket::decrypt(void *buffer, size_t len, size_t *out_len)
+    {
+        if (recv_encrypted_buffer.empty()) return false;
+
+        *out_len = 0;
         while (true)
         {
-            if (do_read)
-            {
-                if (!recv_encrypted())
-                {
-                    if (recv_encrypted_buffer.empty()) break; //remote disconnected
-                    else throw NetworkError("Unexpected socket disconnect");
-                }
-            }
-            do_read = true;
-
             // Prepare decryption buffers
             SecBuffer buffers[4];
             buffers[0] = { (DWORD)recv_encrypted_buffer.size(), SECBUFFER_DATA, &recv_encrypted_buffer[0] };
@@ -230,7 +245,7 @@ namespace http
 
             if (!server && status == SEC_I_CONTEXT_EXPIRED)
             {
-                break; // Disconnect signal
+                return true; // Disconnect signal
             }
             else if (status == SEC_E_OK || status == SEC_I_RENEGOTIATE)
             {
@@ -245,10 +260,10 @@ namespace http
                 {
                     auto decrypt_len = (size_t)buffer_data->cbBuffer;
                     auto decrypt_p = (uint8_t*)buffer_data->pvBuffer;
-                    auto out_cpy_len = std::min(decrypt_len, len - len_out);
+                    auto out_cpy_len = std::min(decrypt_len, len);
 
-                    memcpy(bytes + len_out, decrypt_p, out_cpy_len);
-                    len_out += out_cpy_len;
+                    memcpy((char*)buffer, decrypt_p, out_cpy_len);
+                    *out_len = out_cpy_len;
 
                     if (out_cpy_len < decrypt_len)
                     {   // Had more data than can output, store for later
@@ -274,23 +289,89 @@ namespace http
                     client_handshake_loop(false);
                 }
 
-                if (buffer_data) break;
+                if (buffer_data) return true;
             }
             else if (status == SEC_E_INCOMPLETE_MESSAGE)
             {
                 //Read more data
-                continue;
+                return false;
             }
             else
             {
                 throw NetworkError("DecryptMessage failed");
             }
         }
+    }
+    size_t SchannelSocket::recv(void *buffer, size_t len)
+    {
+        if (auto len2 = recv_cached(buffer, len)) return len2;
 
+        size_t len_out = 0;
+        while (!decrypt(buffer, len, &len_out))
+        {
+            if (!recv_encrypted())
+            {
+                if (recv_encrypted_buffer.empty()) break; //remote disconnected
+                else throw NetworkError("Unexpected socket disconnect");
+            }
+        }
         return len_out;
+    }
+    void SchannelSocket::async_recv(AsyncIo &aio, void *buffer, size_t len,
+        AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error)
+    {
+        if (auto len2 = recv_cached(buffer, len)) return handler(len2);
+
+        struct Processor
+        {
+            SchannelSocket *sock;
+            AsyncIo &aio;
+            void *buffer;
+            size_t len;
+            AsyncIo::RecvHandler handler;
+            AsyncIo::ErrorHandler error;
+
+            void operator()()
+            {
+                try
+                {
+                    size_t out = 0;
+                    if (sock->decrypt(buffer, len, &out))
+                    {
+                        handler(out);
+                        delete this;
+                    }
+                    else
+                    {
+                        auto p = sock->recv_encrypted_buffer.size();
+                        sock->recv_encrypted_buffer.resize(p + 4096);
+                        aio.recv(sock->tcp.get(), sock->recv_encrypted_buffer.data() + p, 4096,
+                            [this, p](size_t len)
+                            {
+                                sock->recv_encrypted_buffer.resize(p + len);
+                                (*this)();
+                            },
+                            [this, p]()
+                            {
+                                sock->recv_encrypted_buffer.resize(p);
+                                error();
+                                delete this;
+                            });
+                    }
+                }
+                catch (const std::exception&)
+                {
+                    error();
+                    delete this;
+                }
+            }
+        };
+        auto processor = new Processor{ this, aio, buffer, len, handler, error };
+        (*processor)();
     }
     size_t SchannelSocket::send(const void * buffer, size_t len)
     {
+        if (len > sec_sizes.cbMaximumMessage) len = sec_sizes.cbMaximumMessage;
         // Prepare encryption buffers
         std::vector<uint8_t> bytes_tmp((const char*)buffer, ((const char*)buffer) + len);
         SecBuffer buffers[4];
@@ -306,6 +387,49 @@ namespace http
         send_sec_buffers(buffers_desc);
 
         return len;
+    }
+    void SchannelSocket::async_send(AsyncIo &aio, const void *buffer, size_t len,
+        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
+    {
+        auto header = sec_sizes.cbHeader;
+        if (len > sec_sizes.cbMaximumMessage) len = sec_sizes.cbMaximumMessage;
+        std::shared_ptr<char> encrypt_buffer(new char[header + len + sec_sizes.cbTrailer]);
+
+        memcpy(encrypt_buffer.get() + header, buffer, len);
+
+        SecBuffer buffers[4];
+        buffers[0] = { sec_sizes.cbHeader, SECBUFFER_STREAM_HEADER, encrypt_buffer.get() };
+        buffers[1] = { (DWORD)len, SECBUFFER_DATA, encrypt_buffer.get() + header };
+        buffers[2] = { sec_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, encrypt_buffer.get() + header + (DWORD)len};
+        buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
+        SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
+        // Encrypt data
+        auto status = sspi->EncryptMessage(&context.handle, 0, &buffers_desc, 0);
+        if (FAILED(status)) throw NetworkError("EncryptMessage failed");
+        assert(buffers[0].cbBuffer == header);
+        assert(buffers[1].cbBuffer == len);
+        assert(buffers[3].BufferType == SECBUFFER_EMPTY);
+        // Send data
+        tcp.async_send_all(aio, encrypt_buffer.get(), header + len + buffers[2].cbBuffer,
+            [encrypt_buffer, handler, len](size_t) { handler(len); },
+            [encrypt_buffer, error]() { error(); });
+    }
+    void SchannelSocket::async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
+    {
+        async_send_all_next(aio, (const char*)buffer, len, 0, handler, error);
+    }
+    void SchannelSocket::async_send_all_next(AsyncIo &aio, const char *buffer, size_t len, size_t sent,
+        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
+    {
+        async_send(aio, buffer + sent, len - sent,
+            [this, &aio, buffer, len, sent, handler, error](size_t len2)
+            {
+                auto total = sent + len2;
+                if (total < len) async_send_all_next(aio, buffer, len, total, handler, error);
+                else handler(len);
+            },
+            error);
     }
 
     void SchannelSocket::alloc_buffers()

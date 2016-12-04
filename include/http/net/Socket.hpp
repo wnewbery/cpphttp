@@ -1,4 +1,5 @@
 #pragma once
+#include "AsyncIo.hpp"
 #include "Os.hpp"
 #include <string>
 namespace http
@@ -46,6 +47,15 @@ namespace http
         virtual bool check_recv_disconnect() = 0;
         /**Sends len bytes, calling send repeatedly if needed.*/
         void send_all(const void *buffer, size_t len);
+
+        virtual void async_disconnect(AsyncIo &aio,
+            std::function<void()> handler, AsyncIo::ErrorHandler error) = 0;
+        virtual void async_recv(AsyncIo &aio, void *buffer, size_t len,
+            AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error) = 0;
+        virtual void async_send(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error) = 0;
+        virtual void async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error) = 0;
     private:
         Socket(const Socket &socket);
         Socket& operator = (const Socket &socket);

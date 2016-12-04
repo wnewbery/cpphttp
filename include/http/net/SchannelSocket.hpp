@@ -43,6 +43,15 @@ namespace http
         }
         virtual size_t recv(void *buffer, size_t len)override;
         virtual size_t send(const void *buffer, size_t len)override;
+
+        virtual void async_disconnect(AsyncIo &aio,
+            std::function<void()> handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_recv(AsyncIo &aio, void *buffer, size_t len,
+            AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
     protected:
         struct UniqueCtxtHandle
         {
@@ -97,8 +106,20 @@ namespace http
         void client_handshake_loop(bool initial_read);
         void client_handshake();
         void send_sec_buffers(const SecBufferDesc &buffers);
+        /**Read data from local recv_decrypted_buffer if possible.*/
+        size_t recv_cached(void *vbytes, size_t len);
         /**recv some data into recv_encrypted_buffer*/
         bool recv_encrypted();
+        /**Decrypts some data from recv_encrypted_buffer into a specified buffer and overflow into
+         * recv_decrypted_buffer.
+         * @return true if data was decrypted, false if more input is needed.
+         */
+        bool decrypt(void *buffer, size_t len, size_t *out_len);
+        void async_send_all_next(AsyncIo &aio, const char *buffer, size_t len, size_t sent,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error);
+
+        /**Creates the message for disconnect and async_disconnect.*/
+        void disconnect_message(SecBufferSingleAutoFree &buffer);
     };
 
     /**Server side S-Channel socket. Presents a certificate on connection.*/

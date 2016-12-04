@@ -16,33 +16,172 @@
 
 namespace http
 {
-    namespace
+    class CoreServer::Connection
     {
-        template<class Arr>
-        int set_fdset(fd_set &set, Arr &sockets)
+    public:
+        /**Run and delete this connection on completion.
+         * This is seperate from the constructor because calling "delete" on an object before its
+         * constructor completes is undefined.
+         */
+        void run(CoreServer *_server, Listener *listener, TcpSocket &&raw_socket)
         {
-            SOCKET max = 0;
-            FD_ZERO(&set);
-            for (auto sock : sockets)
+            try
             {
-                if (sock > max) max = sock;
-                FD_SET(sock, &set);
+                server = _server;
+                keep_alive = false;
+                buffer_len = 0;
+                if (listener->tls)
+                {
+                    //TODO: Make this async/non-blocking
+                    socket = std::make_unique<TlsServerSocket>(std::move(raw_socket), listener->tls_cert);
+                }
+                else
+                {
+                    socket = std::make_unique<TcpSocket>(std::move(raw_socket));
+                }
+                start_request();
             }
-            return (int)max;
+            catch (const std::exception &)
+            {
+                delete this;
+                return;
+            }
         }
-        template<class... Sockets>
-        int set_fdset_v(fd_set &set, Sockets...sockets)
+
+        explicit operator bool()const { return (bool)socket; }
+
+
+    private:
+        CoreServer *server;
+        std::unique_ptr<Socket> socket;
+        bool keep_alive;
+        char buffer[RequestParser::LINE_SIZE];
+        size_t buffer_len;
+        RequestParser parser;
+
+        /**Start receiving a new request.*/
+        void start_request()
         {
-            SOCKET max = 0;
-            FD_ZERO(&set);
-            for (auto sock : {sockets...})
-            {
-                if (sock > max) max = sock;
-                FD_SET(sock, &set);
-            }
-            return (int)max;
+            parser.reset();
+            keep_alive = true;
+            start_recv_request();
         }
-    }
+        /**Start receving part of a request into buffer.
+         * Completion calls recv_request.
+         */
+        void start_recv_request()
+        {
+            socket->async_recv(server->aio, buffer + buffer_len, sizeof(buffer) - buffer_len,
+                std::bind(&CoreServer::Connection::recv_request, this, std::placeholders::_1),
+                std::bind(&CoreServer::Connection::io_error, this));
+        }
+        /**Receive part of a request into buffer.*/
+        void recv_request(size_t len)
+        {
+            if (len == 0)
+            {
+                // Client closed the connection
+                delete this;
+            }
+            else
+            {
+                buffer_len += len;
+
+                auto end = parser.read(buffer, buffer + buffer_len);
+                buffer_len -= end - buffer;
+                memmove(buffer, end, buffer_len);
+
+                if (parser.is_completed()) handle_request();
+                else start_recv_request();
+            }
+        }
+        /**Handle the request, called once recv_request has parsed the entire request message.
+         * Passes the parsed request to owning server, sends the response and either destroys the
+         * connection or starts the next request.
+         */
+        void handle_request()
+        {
+            Request req =
+            {
+                method_from_string(parser.method()),
+                parser.uri(),
+                Url::parse_request(parser.uri()),
+                std::move(parser.headers()),
+                std::move(parser.body())
+            };
+
+            keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
+
+            Response resp;
+            try
+            {
+                resp = server->handle_request(req);
+            }
+            catch (const ErrorResponse &err)
+            {
+                keep_alive = false;
+                resp.status.code = (StatusCode)err.status_code();
+                resp.body = err.what();
+                resp.headers.add("Content-Type", "text/plain");
+            }
+            catch (const std::exception &err)
+            {
+                keep_alive = false;
+                resp.status.code = SC_INTERNAL_SERVER_ERROR;
+                resp.body = err.what();
+                resp.headers.add("Content-Type", "text/plain");
+            }
+
+            if (resp.status.msg.empty())
+            {
+                resp.status.msg = default_status_msg(resp.status.code);
+            }
+            resp.headers.set("Connection", keep_alive ? "keep-alive" : "close");
+
+            // Send response
+            auto sc = resp.status.code;
+            // For certain response codes, there must not be a message body
+            bool message_body_allowed = sc != 204 && sc != 205 && sc != 304;
+            //For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
+            bool send_message_body = !resp.body.empty() && message_body_allowed && parser.method() != "HEAD";
+
+            if (message_body_allowed)
+            {
+                //TODO: Support chunked streams in the future
+                resp.headers.set("Content-Length", std::to_string(resp.body.size()));
+            }
+            else if (!resp.body.empty())
+            {
+                throw std::runtime_error("HTTP forbids this response from having a body");
+            }
+
+            add_default_headers(resp);
+
+            // Send response header
+            std::stringstream ss;
+            write_response_header(ss, resp);
+            auto ss_str = ss.str();
+            socket->send_all(ss_str.data(), ss_str.size());
+            // Send response body
+            if (send_message_body)
+            {
+                socket->send_all(resp.body.data(), resp.body.size());
+            }
+
+            if (keep_alive) start_request();
+            else
+            {
+                auto handler = [this]() { delete this; };
+                socket->async_disconnect(server->aio, handler, handler);
+            }
+        }
+        /**Called if any recv or send fails. Destroys this connection.*/
+        void io_error()
+        {
+            delete this;
+        }
+    };
+
     CoreServer::~CoreServer()
     {
         exit();
@@ -72,257 +211,36 @@ namespace http
     {
         std::unique_lock<std::mutex> lock(running_mutex, std::try_to_lock);
         if (!lock) throw std::runtime_error("CoreServer::run failed to lock mutex. Is CoreServer already running?");
-        exit_socket.create();
+        for (auto &i : listeners) accept_next(i);
 
-        fd_set read_set;
-        while (true)
-        {
-            FD_ZERO(&read_set);
-            SOCKET max = exit_socket.get();
-            FD_SET(exit_socket.get(), &read_set);
-            for (auto &listener : listeners)
-            {
-                auto fd = listener.socket.get();
-                if (fd > max) max = fd;
-                FD_SET(fd, &read_set);
-            }
-
-            // (int)max is safe. Even if MS changes the implementation to return higher value sockets,
-            // Windows select ignores this parameter. On Linux file descriptors are of type int.
-            auto ret = select((int)max + 1, &read_set, nullptr, nullptr, nullptr);
-            if (ret < 0) throw SocketError(last_net_error());
-            if (FD_ISSET(exit_socket.get(), &read_set)) break;
-            for (auto &listener : listeners)
-            {
-                if (FD_ISSET(listener.socket.get(), &read_set))
-                {
-                    accept(listener);
-                }
-            }
-        }
-        // Exiting, wait for workers and clean up
-#ifndef _WIN32
-        for (auto &thread : threads)
-            thread.exit_socket.signal();
-#endif
-        for (auto &thread : threads)
-            if (thread.thread.joinable())
-                thread.thread.join();
-        threads.clear();
-        exit_socket.destroy();
+        aio.run();
     }
     void CoreServer::exit()
     {
         std::unique_lock<std::mutex> lock(running_mutex, std::try_to_lock);
         if (!lock)
         {
-            exit_socket.signal();
+            aio.exit();
             // Clean up is done by run(). Wait for it.
             lock.lock();
         }
     }
-    void CoreServer::accept(Listener &listener)
+    void CoreServer::accept_next(Listener &listener)
     {
-        auto sock = listener.socket.accept();
-        if (sock) // If the client did not already disconnect
-        {
-            // New thread
-            threads.emplace_back(this, &listener, std::move(sock));
-        }
-
-        // Clear out any dead entries
-        for (auto thread = threads.begin(); thread != threads.end(); )
-        {
-            if (thread->running) ++thread;
-            else
-            {
-                thread->thread.join();
-                thread = threads.erase(thread);
-            }
-        }
+        aio.accept(listener.socket.get(),
+            std::bind(&CoreServer::accept, this, std::ref(listener), std::placeholders::_1),
+            std::bind(&CoreServer::accept_error, this));
     }
-
-
-    CoreServer::Thread::Thread(CoreServer *server, Listener *listener, TcpSocket &&socket)
-        : thread(), running(true), server(server), socket()
+    void CoreServer::accept(Listener &listener, TcpSocket &&sock)
     {
-#ifndef _WIN32
-        exit_socket.create();
-#endif
-        if (listener->tls)
-        {
-            thread = std::thread(&CoreServer::Thread::main_tls, this, listener, std::move(socket));
-        }
-        else
-        {
-            thread = std::thread(&CoreServer::Thread::main_tcp, this, std::move(socket));
-        }
+        assert(sock);
+        (new Connection())->run(this, &listener, std::move(sock));
+        accept_next(listener);
     }
-    CoreServer::Thread::~Thread() {}
-
-    void CoreServer::Thread::main_tcp(TcpSocket &&new_socket)
+    void CoreServer::accept_error()
     {
-        try
-        {
-            set_thread_name("http::CoreServer worker");
-            socket.reset(new TcpSocket(std::move(new_socket)));
-            run();
-            running = false;
-        }
-        catch (const std::exception &e)
-        {
-            running = false;
-            std::cerr << "Worker exception: " << e.what() << std::endl;
-        }
-    }
-    void CoreServer::Thread::main_tls(Listener *listener, TcpSocket &&new_socket)
-    {
-        try
-        {
-            set_thread_name("http::CoreServer worker");
-            //TODO: Make an asyncronous TLS negotiation
-            socket.reset(new TlsServerSocket(std::move(new_socket), listener->tls_cert));
-            run();
-            running = false;
-        }
-        catch (const std::exception &e)
-        {
-            running = false;
-            std::cerr << "Worker exception: " << e.what() << std::endl;
-        }
-    }
-
-    void CoreServer::Thread::run()
-    {
-        char buffer[RequestParser::LINE_SIZE];
-        size_t buffer_len = 0;
-        RequestParser parser;
-        bool keep_alive = true;
-        while (keep_alive)
-        {
-            if (!buffer_len && !socket->recv_pending())
-            {
-                fd_set read_set;
-#ifdef _WIN32
-                auto &exit_socket = server->exit_socket;
-#endif
-                auto max = set_fdset_v(read_set, exit_socket.get(), socket->get());
-                auto ret = select(max + 1, &read_set, nullptr, nullptr, nullptr);
-                if (ret <= 0) throw std::runtime_error("select failed");
-                if (FD_ISSET(exit_socket.get(), &read_set)) break;
-                assert(FD_ISSET(socket->get(), &read_set));
-            }
-
-            //Start request
-            //TODO: Idle timeout
-            //TODO: Allow aborting in-progress requests
-            Response resp;
-            resp.body.clear();
-            try
-            {
-                //parse
-                parser.reset();
-                while (!parser.is_completed())
-                {
-                    auto recved = socket->recv(buffer + buffer_len, sizeof(buffer) - buffer_len);
-                    if (!recved)
-                    {
-                        if (parser.state() == BaseParser::START) break;
-                        else throw std::runtime_error("Unexpected client disconnect");
-                    }
-                    buffer_len += recved;
-
-                    auto end = parser.read(buffer, buffer + buffer_len);
-                    buffer_len -= end - buffer;
-                    memmove(buffer, end, buffer_len);
-                }
-                //Handle
-                Request req =
-                {
-                    method_from_string(parser.method()),
-                    parser.uri(),
-                    Url::parse_request(parser.uri()),
-                    parser.headers(),
-                    parser.body()
-                };
-
-                keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
-
-                resp = server->handle_request(req);
-            }
-            catch (const ParserError &err)
-            {
-                keep_alive = false;
-                int status = err.status_code();
-                if (status <= 0) status = 400;
-                resp.status.code = (StatusCode)status;
-                resp.body = err.what();
-                resp.headers.add("Content-Type", "text/plain");
-            }
-            catch (const ErrorResponse &err)
-            {
-                keep_alive = false;
-                resp.status.code = (StatusCode)err.status_code();
-                resp.body = err.what();
-                resp.headers.add("Content-Type", "text/plain");
-            }
-            catch (const std::exception &err)
-            {
-                keep_alive = false;
-                resp.status.code = SC_INTERNAL_SERVER_ERROR;
-                resp.body = err.what();
-                resp.headers.add("Content-Type", "text/plain");
-            }
-            if (resp.status.msg.empty())
-            {
-                resp.status.msg = default_status_msg(resp.status.code);
-            }
-            resp.headers.set("Connection", keep_alive ? "keep-alive" : "close");
-            //Send response
-            send_response(socket.get(), parser.method(), resp);
-        }
-        socket->disconnect();
-    }
-
-    CoreServer::SignalSocket::SignalSocket()
-        : send(INVALID_SOCKET), recv(INVALID_SOCKET)
-    {}
-    CoreServer::SignalSocket::~SignalSocket()
-    {
-        destroy();
-    }
-    void CoreServer::SignalSocket::create()
-    {
-        assert(send == INVALID_SOCKET && recv == INVALID_SOCKET);
-
-        TcpListenSocket listen("127.0.0.1", 0);
-        sockaddr_in addr;
-        auto len = (socklen_t)sizeof(addr);
-        getsockname(listen.get(), (sockaddr*)&addr, &len);
-
-        send = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (send == INVALID_SOCKET) throw std::runtime_error("SignalSocket socket failed");
-        if (connect(send, (sockaddr*)&addr, len))
-            throw std::runtime_error("SignalSocket connect failed");
-
-        recv = ::accept(listen.get(), nullptr, nullptr);
-        if (recv == INVALID_SOCKET) throw std::runtime_error("SignalSocket accept failed");
-    }
-    void CoreServer::SignalSocket::destroy()
-    {
-        if (send != INVALID_SOCKET) closesocket(send);
-        if (recv != INVALID_SOCKET) closesocket(recv);
-        send = recv = INVALID_SOCKET;
-    }
-    void CoreServer::SignalSocket::signal()
-    {
-        assert(send != INVALID_SOCKET && recv != INVALID_SOCKET);
-        char val[1] = {'X'};
-        if (::send(send, val, 1, 0) != 1)
-            throw std::runtime_error("SignalSocket signal failed");
-    }
-    SOCKET CoreServer::SignalSocket::get()
-    {
-        return recv;
+        // Rethrow anything except AsyncAborted. Will kill the server instance.
+        try { throw; }
+        catch (const AsyncAborted &) {}
     }
 }

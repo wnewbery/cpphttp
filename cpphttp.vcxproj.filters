@@ -144,6 +144,9 @@
     <ClInclude Include="include\http\net\Cert.hpp">
       <Filter>include\net</Filter>
     </ClInclude>
+    <ClInclude Include="include\http\net\AsyncIo.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Time.cpp">
@@ -216,6 +219,9 @@
       <Filter>source\net</Filter>
     </ClCompile>
     <ClCompile Include="source\net\Cert.cpp">
+      <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="source\net\AsyncIo.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
   </ItemGroup>

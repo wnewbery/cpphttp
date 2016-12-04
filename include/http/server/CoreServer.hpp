@@ -1,4 +1,5 @@
 #pragma once
+#include "../net/AsyncIo.hpp"
 #include "../net/TcpListenSocket.hpp"
 #include "../net/Cert.hpp"
 #include <atomic>
@@ -61,45 +62,15 @@ namespace http
             bool tls;
             PrivateCert tls_cert;
         };
-        // TODO: Refactor. On Windows can use events, on Linux can use pipes
-        class SignalSocket
-        {
-        public:
-            SignalSocket();
-            ~SignalSocket();
-            void create();
-            void destroy();
-            void signal();
-            SOCKET get();
-        private:
-            SOCKET send;
-            SOCKET recv;
-        };
-        class Thread
-        {
-        public:
-            Thread(CoreServer *server, Listener *listener, TcpSocket &&socket);
-            ~Thread();
+        class Connection;
 
-            void main_tcp(TcpSocket &&socket);
-            void main_tls(Listener *listener, TcpSocket &&socket);
-            void run();
-
-            std::thread thread;
-            std::atomic<bool> running;
-            CoreServer *server;
-            std::unique_ptr<Socket> socket;
-#ifndef _WIN32
-            SignalSocket exit_socket;
-#endif
-        };
-
+        AsyncIo aio;
         std::vector<Listener> listeners;
-        std::list<Thread> threads;
-        SignalSocket exit_socket;
         /**Held by run(), preventing exit() from continueing until run() is finished.*/
         std::mutex running_mutex;
 
-        void accept(Listener &listener);
+        void accept_next(Listener &listener);
+        void accept(Listener &listener, TcpSocket &&sock);
+        void accept_error();
     };
 }

@@ -121,6 +121,7 @@
     <ClInclude Include="include\http\Headers.hpp" />
     <ClInclude Include="include\http\headers\Accept.hpp" />
     <ClInclude Include="include\http\Method.hpp" />
+    <ClInclude Include="include\http\net\AsyncIo.hpp" />
     <ClInclude Include="include\http\net\OpenSslListenSocket.hpp" />
     <ClInclude Include="include\http\net\Os.hpp" />
     <ClInclude Include="include\http\net\Net.hpp" />
@@ -156,6 +157,7 @@
     <ClCompile Include="source\Headers.cpp" />
     <ClCompile Include="source\headers\Accept.cpp" />
     <ClCompile Include="source\Method.cpp" />
+    <ClCompile Include="source\net\AsyncIo.cpp" />
     <ClCompile Include="source\net\Cert.cpp" />
     <ClCompile Include="source\net\Net.cpp" />
     <ClCompile Include="source\net\OpenSslListenSocket.cpp">

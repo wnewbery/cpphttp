@@ -31,6 +31,10 @@ namespace http
 #endif
     /**Get the most recent error code from the networking library (WSAGetLastError or errno).*/
     int last_net_error();
+    /**True if the error code says a non-blocking operation would have blocked.
+     * WSAEWOULDBLOCK, EAGAIN or EWOULDBLOCK.
+     */
+    bool would_block(int err);
 
     /**Base exception type for socket or other low level networking (e.g. DNS) errors.*/
     class NetworkError : public std::runtime_error
@@ -88,7 +92,7 @@ namespace http
             return msg;
         }
     };
-    
+
     /**Failed to verify the servers certificate.*/
     class CertificateVerificationError : public ConnectionError
     {

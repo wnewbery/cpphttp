@@ -50,15 +50,19 @@ public:
         return len;
     }
 
-    void send_all(const void *buffer, size_t len)
-    {
-        send(buffer, len);
-    }
-
     std::string recv_remaining()const
     {
         return { recv_buffer.begin() + recv_p, recv_buffer.end() };
     }
+
+    virtual void async_disconnect(http::AsyncIo &,
+        std::function<void()>, http::AsyncIo::ErrorHandler)override {}
+    virtual void async_recv(http::AsyncIo &, void *, size_t,
+        http::AsyncIo::RecvHandler, http::AsyncIo::ErrorHandler)override {}
+    virtual void async_send(http::AsyncIo &, const void *, size_t,
+        http::AsyncIo::SendHandler, http::AsyncIo::ErrorHandler)override {}
+    virtual void async_send_all(http::AsyncIo &, const void *, size_t,
+        http::AsyncIo::SendHandler, http::AsyncIo::ErrorHandler)override {}
 
     TestSocketFactory *factory;
     bool tls;

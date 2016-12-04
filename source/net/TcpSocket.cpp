@@ -1,6 +1,7 @@
 #include "net/TcpSocket.hpp"
 #include "net/Os.hpp"
 #include "net/Net.hpp"
+#include "net/SocketUtils.hpp"
 #include <limits>
 #include <cassert>
 namespace http
@@ -107,6 +108,10 @@ namespace http
         //TODO: Better error report if there were multiple possible address
         throw ConnectionError(last_error, host, port);
     }
+    void TcpSocket::set_non_blocking(bool non_blocking)
+    {
+        http::set_non_blocking(socket, non_blocking);
+    }
     std::string TcpSocket::address_str() const
     {
         if (socket != INVALID_SOCKET) return _host + ":" + std::to_string(_port);
@@ -179,5 +184,41 @@ namespace http
         char buffer[1];
         if (recv(buffer, sizeof(buffer)) == 0) return true;
         else throw std::runtime_error("Received unexpected data.");
+    }
+    void TcpSocket::async_disconnect(AsyncIo &aio,
+        std::function<void()> handler, AsyncIo::ErrorHandler error)
+    {
+        assert(socket != INVALID_SOCKET);
+        shutdown(socket, SD_SEND);
+
+        static char buffer[1];
+        aio.recv(socket, buffer, 1,
+            [this, handler](size_t len)
+            {
+                closesocket(socket);
+                socket = INVALID_SOCKET;
+                handler();
+            },
+            [this, error]()
+            {
+                closesocket(socket);
+                socket = INVALID_SOCKET;
+                error();
+            });
+    }
+    void TcpSocket::async_recv(AsyncIo &aio, void *buffer, size_t len,
+        AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error)
+    {
+        aio.recv(socket, buffer, len, handler, error);
+    }
+    void TcpSocket::async_send(AsyncIo &aio, const void *buffer, size_t len,
+        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
+    {
+        aio.send(socket, buffer, len, handler, error);
+    }
+    void TcpSocket::async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
+    {
+        aio.send_all(socket, buffer, len, handler, error);
     }
 }
