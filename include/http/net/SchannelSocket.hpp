@@ -115,8 +115,6 @@ namespace http
          * @return true if data was decrypted, false if more input is needed.
          */
         bool decrypt(void *buffer, size_t len, size_t *out_len);
-        void async_send_all_next(AsyncIo &aio, const char *buffer, size_t len, size_t sent,
-            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error);
 
         /**Creates the message for disconnect and async_disconnect.*/
         void disconnect_message(SecBufferSingleAutoFree &buffer);

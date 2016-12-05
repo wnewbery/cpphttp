@@ -388,48 +388,50 @@ namespace http
 
         return len;
     }
-    void SchannelSocket::async_send(AsyncIo &aio, const void *buffer, size_t len,
+    void SchannelSocket::async_send(AsyncIo &aio, const void *raw_buffer, size_t len,
         AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
     {
         auto header = sec_sizes.cbHeader;
-        if (len > sec_sizes.cbMaximumMessage) len = sec_sizes.cbMaximumMessage;
-        std::shared_ptr<char> encrypt_buffer(new char[header + len + sec_sizes.cbTrailer]);
+        auto trailer = sec_sizes.cbTrailer;
+        auto max = sec_sizes.cbMaximumMessage;
 
-        memcpy(encrypt_buffer.get() + header, buffer, len);
+        auto blocks = (len + max - 1) / max;
+        std::shared_ptr<char> buffer(new char[(header + trailer) * blocks + len]);
+        auto buffer_p = buffer.get();
+        auto raw_p = (const char*)raw_buffer;
+        for (size_t i = 0; i < blocks; ++i)
+        {
+            DWORD block_len = i < blocks - 1 ? max : (DWORD)(len % max);
+            memcpy(buffer_p + header, raw_p, block_len);
 
-        SecBuffer buffers[4];
-        buffers[0] = { sec_sizes.cbHeader, SECBUFFER_STREAM_HEADER, encrypt_buffer.get() };
-        buffers[1] = { (DWORD)len, SECBUFFER_DATA, encrypt_buffer.get() + header };
-        buffers[2] = { sec_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, encrypt_buffer.get() + header + (DWORD)len};
-        buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
-        SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
-        // Encrypt data
-        auto status = sspi->EncryptMessage(&context.handle, 0, &buffers_desc, 0);
-        if (FAILED(status)) throw NetworkError("EncryptMessage failed");
-        assert(buffers[0].cbBuffer == header);
-        assert(buffers[1].cbBuffer == len);
-        assert(buffers[3].BufferType == SECBUFFER_EMPTY);
+            SecBuffer buffers[4];
+            buffers[0] = { header, SECBUFFER_STREAM_HEADER, buffer_p };
+            buffers[1] = { (DWORD)len, SECBUFFER_DATA, buffer_p + header };
+            buffers[2] = { trailer, SECBUFFER_STREAM_TRAILER, buffer_p + header + block_len };
+            buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
+            SecBufferDesc buffers_desc = { SECBUFFER_VERSION, 4, buffers };
+
+            // Encrypt data
+            auto status = sspi->EncryptMessage(&context.handle, 0, &buffers_desc, 0);
+            if (FAILED(status)) throw NetworkError("EncryptMessage failed");
+            assert(buffers[0].cbBuffer == header);
+            assert(buffers[1].cbBuffer == block_len);
+            assert(buffers[2].cbBuffer <= trailer);
+            assert(buffers[3].BufferType == SECBUFFER_EMPTY);
+
+            raw_p += block_len;
+            buffer_p += header + block_len + buffers[3].cbBuffer;
+        }
+
         // Send data
-        tcp.async_send_all(aio, encrypt_buffer.get(), header + len + buffers[2].cbBuffer,
-            [encrypt_buffer, handler, len](size_t) { handler(len); },
-            [encrypt_buffer, error]() { error(); });
+        tcp.async_send_all(aio, buffer.get(), (size_t)(buffer_p - buffer.get()),
+            [buffer, handler, len](size_t) { handler(len); },
+            [buffer, error]() { error(); });
     }
     void SchannelSocket::async_send_all(AsyncIo &aio, const void *buffer, size_t len,
         AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
     {
-        async_send_all_next(aio, (const char*)buffer, len, 0, handler, error);
-    }
-    void SchannelSocket::async_send_all_next(AsyncIo &aio, const char *buffer, size_t len, size_t sent,
-        AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)
-    {
-        async_send(aio, buffer + sent, len - sent,
-            [this, &aio, buffer, len, sent, handler, error](size_t len2)
-            {
-                auto total = sent + len2;
-                if (total < len) async_send_all_next(aio, buffer, len, total, handler, error);
-                else handler(len);
-            },
-            error);
+        async_send(aio, buffer, len, handler, error);
     }
 
     void SchannelSocket::alloc_buffers()
