@@ -420,7 +420,7 @@ namespace http
             assert(buffers[3].BufferType == SECBUFFER_EMPTY);
 
             raw_p += block_len;
-            buffer_p += header + block_len + buffers[3].cbBuffer;
+            buffer_p += header + block_len + buffers[2].cbBuffer;
         }
 
         // Send data

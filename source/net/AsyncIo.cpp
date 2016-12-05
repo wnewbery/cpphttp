@@ -125,9 +125,10 @@ namespace http
             for (auto &i : in_progress.recv) fd_sets.read(i.first);
             for (auto &i : in_progress.send) fd_sets.write(i.first);
             // select, wait for a signal for new operation, or for a current operator to complete
-            if (select(fd_sets.nfds, &fd_sets.read_set, &fd_sets.write_set, nullptr, nullptr) < 0)
-                throw std::runtime_error("select failed");
-            if (fd_sets.check_read(signal.get())) signal.clear();
+            auto select_ret = select(fd_sets.nfds, &fd_sets.read_set, &fd_sets.write_set, nullptr, nullptr);
+            if (select_ret < 0) throw std::runtime_error("select failed");
+            if (fd_sets.check_read(signal.get()))
+                signal.clear();
             // Process accept
             for (auto i = in_progress.accept.begin(); i != in_progress.accept.end();)
             {
@@ -189,7 +190,7 @@ namespace http
             for (auto i = in_progress.send.begin(); i != in_progress.send.end();)
             {
                 auto &op = i->second.front();
-                if (fd_sets.check_read(op.sock))
+                if (fd_sets.check_write(op.sock))
                 {
                     try
                     {

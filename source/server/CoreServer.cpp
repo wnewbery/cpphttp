@@ -64,6 +64,10 @@ namespace http
         size_t buffer_len;
         RequestParser parser;
 
+        Response response;
+        bool response_has_body;
+        std::string response_header;
+
         /**Start receiving a new request.*/
         void start_request()
         {
@@ -117,71 +121,93 @@ namespace http
 
             keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
 
-            Response resp;
             try
             {
-                resp = server->handle_request(req);
+                response = server->handle_request(req);
             }
             catch (const ErrorResponse &err)
             {
                 keep_alive = false;
-                resp.status.code = (StatusCode)err.status_code();
-                resp.body = err.what();
-                resp.headers.add("Content-Type", "text/plain");
+                response.status.code = (StatusCode)err.status_code();
+                response.body = err.what();
+                response.headers.add("Content-Type", "text/plain");
             }
             catch (const std::exception &err)
             {
                 keep_alive = false;
-                resp.status.code = SC_INTERNAL_SERVER_ERROR;
-                resp.body = err.what();
-                resp.headers.add("Content-Type", "text/plain");
+                response.status.code = SC_INTERNAL_SERVER_ERROR;
+                response.body = err.what();
+                response.headers.add("Content-Type", "text/plain");
             }
 
-            if (resp.status.msg.empty())
+            if (response.status.msg.empty())
             {
-                resp.status.msg = default_status_msg(resp.status.code);
+                response.status.msg = default_status_msg(response.status.code);
             }
-            resp.headers.set("Connection", keep_alive ? "keep-alive" : "close");
+            response.headers.set("Connection", keep_alive ? "keep-alive" : "close");
 
             // Send response
-            auto sc = resp.status.code;
+            auto sc = response.status.code;
             // For certain response codes, there must not be a message body
             bool message_body_allowed = sc != 204 && sc != 205 && sc != 304;
-            //For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
-            bool send_message_body = !resp.body.empty() && message_body_allowed && parser.method() != "HEAD";
+            // For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
+            response_has_body = !response.body.empty() && message_body_allowed && parser.method() != "HEAD";
 
             if (message_body_allowed)
             {
                 //TODO: Support chunked streams in the future
-                resp.headers.set("Content-Length", std::to_string(resp.body.size()));
+                response.headers.set("Content-Length", std::to_string(response.body.size()));
             }
-            else if (!resp.body.empty())
+            else if (!response.body.empty())
             {
                 throw std::runtime_error("HTTP forbids this response from having a body");
             }
 
-            add_default_headers(resp);
+            add_default_headers(response);
 
-            // Send response header
+            send_response();
+        }
+        /**Starts sending a response. Calls send_response_body on completion.*/
+        void send_response()
+        {
             std::stringstream ss;
-            write_response_header(ss, resp);
-            auto ss_str = ss.str();
-            socket->send_all(ss_str.data(), ss_str.size());
-            // Send response body
-            if (send_message_body)
-            {
-                socket->send_all(resp.body.data(), resp.body.size());
-            }
+            write_response_header(ss, response);
+            response_header = ss.str();
 
-            if (keep_alive) start_request();
-            else
+            socket->async_send_all(server->aio, response_header.data(), response_header.size(),
+                std::bind(&CoreServer::Connection::send_response_body, this),
+                std::bind(&CoreServer::Connection::io_error, this));
+        }
+        /**Send the response body if needed, then call complete_response.*/
+        void send_response_body()
+        {
+            if (response_has_body)
             {
-                auto handler = [this]() { delete this; };
-                socket->async_disconnect(server->aio, handler, handler);
+                socket->async_send_all(server->aio, response.body.data(), response.body.size(),
+                    std::bind(&CoreServer::Connection::complete_response, this),
+                    std::bind(&CoreServer::Connection::io_error, this));
             }
+            else complete_response();
+        }
+        /**Complete a request-response. If keep_alive, start the next request, else close this connection.*/
+        void complete_response()
+        {
+            if (keep_alive) start_request();
+            else shutdown();
         }
         /**Called if any recv or send fails. Destroys this connection.*/
         void io_error()
+        {
+            delete this;
+        }
+        /**Shutdown this connection.*/
+        void shutdown()
+        {
+            auto handler = std::bind(&CoreServer::Connection::destroy, this);
+            socket->async_disconnect(server->aio, handler, handler);
+        }
+        /**Destroy this connection.*/
+        void destroy()
         {
             delete this;
         }
