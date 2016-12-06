@@ -34,18 +34,26 @@ namespace http
         virtual size_t send(const void *buffer, size_t len)override;
         virtual bool check_recv_disconnect()override;
 
-        virtual void async_disconnect(http::AsyncIo &,
-            std::function<void()>, http::AsyncIo::ErrorHandler)override {}
-        virtual void async_recv(http::AsyncIo &, void *, size_t,
-            http::AsyncIo::RecvHandler, http::AsyncIo::ErrorHandler)override {}
-        virtual void async_send(http::AsyncIo &, const void *, size_t,
-            http::AsyncIo::SendHandler, http::AsyncIo::ErrorHandler)override {}
-        virtual void async_send_all(http::AsyncIo &, const void *, size_t,
-            http::AsyncIo::SendHandler, http::AsyncIo::ErrorHandler)override {}
-
+        virtual void async_disconnect(AsyncIo &aio,
+            std::function<void()> handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_recv(AsyncIo &aio, void *buffer, size_t len,
+            AsyncIo::RecvHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
+        virtual void async_send_all(AsyncIo &aio, const void *buffer, size_t len,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error)override;
     protected:
         TcpSocket tcp;
         std::unique_ptr<SSL, detail::OpenSslDeleter> ssl;
+        /**Received encrpyted data ready for OpenSSL. Owned by ssl.*/
+        BIO *in_bio;
+        /**Outgoing encrypted data ready to send to the remote. Owned by ssl.*/
+        BIO *out_bio;
+        char bio_buffer[4096];
+
+        void async_send_next(AsyncIo &aio, const void *buffer, size_t len, size_t sent,
+            AsyncIo::SendHandler handler, AsyncIo::ErrorHandler error);
+        void async_send_bio(AsyncIo &aio, std::function<void()> handler, AsyncIo::ErrorHandler error);
     };
     /**Server side OpenSSL socket. Presents a certificate on connection.*/
     class OpenSslServerSocket : public OpenSslSocket
@@ -58,9 +66,12 @@ namespace http
         OpenSslServerSocket& operator =(const OpenSslServerSocket&)=delete;
         OpenSslServerSocket& operator =(OpenSslServerSocket&&)=default;
 
-        void async_create(AsyncIo &, TcpSocket &&, const PrivateCert &,
-            std::function<void()>, AsyncIo::ErrorHandler) {}
-    protected:
+        void async_create(AsyncIo &aio, TcpSocket &&socket, const PrivateCert &cert,
+            std::function<void()> handler, AsyncIo::ErrorHandler error);
+    private:
         std::unique_ptr<SSL_CTX, detail::OpenSslDeleter> openssl_ctx;
+
+        void setup(TcpSocket &&socket, const PrivateCert &cert);
+        void async_create_next(AsyncIo &aio, std::function<void()> handler, AsyncIo::ErrorHandler error);
     };
 }

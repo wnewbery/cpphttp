@@ -18,15 +18,15 @@ namespace http
         std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_server_ctx;
         const SSL_METHOD *openssl_server_method;
 
-        std::string openssl_err_str(SSL *ssl, int error)
+        std::string openssl_err_str(SSL *ssl, int ret)
         {
             auto e2 = errno;
-            auto serr = SSL_get_error(ssl, error);
+            auto serr = SSL_get_error(ssl, ret);
             if (serr == SSL_ERROR_SYSCALL) return errno_string(e2);
             // Get OpenSSL error
             auto str = ERR_error_string(serr, nullptr);
             if (str) return str;
-            else return errno_string(error);
+            else return errno_string(ret);
         }
 
         std::unique_ptr<std::mutex[]> openssl_mutexes;
@@ -59,6 +59,7 @@ namespace http
             OPENSSL_Applink();
 #endif
             SSL_load_error_strings(); //OpenSSL SSL error strings
+            ERR_load_BIO_strings();
             OpenSSL_add_ssl_algorithms();
 
             // Client

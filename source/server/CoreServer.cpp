@@ -36,8 +36,8 @@ namespace http
                     auto tls = new TlsServerSocket();
                     socket.reset(tls);
                     tls->async_create(server->aio, std::move(raw_socket), listener->tls_cert,
-                        std::bind(&CoreServer::Connection::io_error, this),
-                        [this]() { delete this; });
+                        std::bind(&CoreServer::Connection::start_request, this),
+                        std::bind(&CoreServer::Connection::io_error, this));
                 }
                 else
                 {
@@ -92,6 +92,7 @@ namespace http
                 {
                     // Client closed the connection
                     delete this;
+                    return;
                 }
                 else
                 {
@@ -109,6 +110,7 @@ namespace http
             {
                 std::cerr << typeid(e).name() << ' ' << e.what() << std::endl;
                 delete this;
+                return;
             }
         }
         /**Handle the request, called once recv_request has parsed the entire request message.
