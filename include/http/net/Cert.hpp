@@ -1,9 +1,7 @@
 #pragma once
 #include <algorithm>
+#include <memory>
 #include <string>
-#ifndef _WIN32
-#   include <memory>
-#endif
 namespace http
 {
     struct OpenSslPrivateCertData;
@@ -11,7 +9,7 @@ namespace http
     class PrivateCert
     {
     public:
-    #ifdef _WIN32
+    #if defined(_WIN32) && !defined(HTTP_USE_OPENSSL)
         /**PCCERT_CONTEXT*/
         typedef const void *Native;
     #else

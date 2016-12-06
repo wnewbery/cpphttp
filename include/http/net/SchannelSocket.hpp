@@ -2,6 +2,7 @@
 #include "Socket.hpp"
 #include "TcpSocket.hpp"
 #include "Os.hpp"
+#include "Schannel.hpp"
 #include <cstdint>
 #include <vector>
 #include <memory>

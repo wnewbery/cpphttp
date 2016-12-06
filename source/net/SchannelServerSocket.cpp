@@ -1,15 +1,14 @@
 #include "net/SchannelSocket.hpp"
 #include "net/Net.hpp"
 #include "net/Cert.hpp"
-#include "Schannel.hpp"
+#include "net/Schannel.hpp"
 #include "String.hpp"
 #include <cassert>
 #include <algorithm>
 
 namespace http
 {
-    extern SecurityFunctionTableW *sspi; //http::init_net, Net.cpp
-
+    using namespace detail;
     /*namespace
     {
         struct CertContext

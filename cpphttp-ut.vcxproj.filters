@@ -54,7 +54,6 @@
     <ClCompile Include="tests\client\AsyncClient.cpp">
       <Filter>source\client</Filter>
     </ClCompile>
-    <ClCompile Include="tests\TestSocketFactory.cpp" />
     <ClCompile Include="tests\server\Router.cpp">
       <Filter>source\server</Filter>
     </ClCompile>
@@ -69,6 +68,9 @@
     </ClCompile>
     <ClCompile Include="tests\net\Cert.cpp">
       <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\TestSocketFactory.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

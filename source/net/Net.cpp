@@ -4,17 +4,28 @@
 #include "String.hpp"
 #include <cassert>
 
+#ifdef HTTP_USE_OPENSSL
+#include "net/OpenSsl.hpp"
+#endif
+
 #ifdef _WIN32
+#include "net/Schannel.hpp"
 namespace http
 {
-    SecurityFunctionTableW *sspi;
+    namespace detail
+    {
+        SecurityFunctionTableW *sspi;
+    }
 
     void init_net()
     {
         WSADATA wsa_data;
         WSAStartup(MAKEWORD(2, 2), &wsa_data);
-
-        sspi = InitSecurityInterfaceW();
+#ifdef HTTP_USE_OPENSSL
+        detail::init_openssl();
+#else
+        detail::sspi = InitSecurityInterfaceW();
+#endif
     }
     std::string win_error_string(int err)
     {
@@ -45,17 +56,13 @@ namespace http
     std::string errno_string(int err)
     {
         char buffer[1024];
-        if (!strerror_s(buffer, sizeof(buffer), err)) throw std::runtime_error("strerror_s failed");
+        if (strerror_s(buffer, sizeof(buffer), err))
+            throw std::runtime_error("strerror_s failed");
         return buffer;
     }
 }
 #else
 #include <cstring> //strerror_r
-#include <openssl/opensslconf.h>
-#include <openssl/ssl.h>
-#ifndef OPENSSL_THREADS
-#   error OPENSSL_THREADS required
-#endif
 #include <vector>
 #include <pthread.h>
 #include <signal.h>
@@ -64,49 +71,10 @@ namespace http
 
 namespace http
 {
-    SSL_CTX* openssl_ctx;
-    const SSL_METHOD *openssl_method;
-    SSL_CTX* openssl_server_ctx;
-    const SSL_METHOD *openssl_server_method;
-    std::vector<pthread_mutex_t> openssl_mutexes;
-    static unsigned long openssl_thread_id(void)
-    {
-        return (unsigned long)pthread_self();
-    }
-    void openssl_locking_callback(int mode, int type, const char *file, int line)
-    {
-        assert(!openssl_mutexes.empty());
-        assert(type >= 0);
-        assert(type < (int)openssl_mutexes.size());
-        if (mode & CRYPTO_LOCK) {
-            pthread_mutex_lock(&(openssl_mutexes[type]));
-        }
-        else {
-            pthread_mutex_unlock(&(openssl_mutexes[type]));
-        }
-    }
 
     void init_net()
     {
-        SSL_load_error_strings(); //OpenSSL SSL error strings
-        OpenSSL_add_ssl_algorithms();
-
-        // Client
-        openssl_method = SSLv23_client_method();//TLS_client_method();
-        openssl_ctx = SSL_CTX_new(openssl_method);
-        if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
-        // Load default trust roots
-        if (!SSL_CTX_set_default_verify_paths(openssl_ctx))
-            throw std::runtime_error("SSL_CTX_set_default_verify_paths failed");
-        // Server
-        openssl_server_method = SSLv23_server_method();
-        openssl_server_ctx = SSL_CTX_new(openssl_server_method);
-        if (!openssl_server_ctx) throw std::runtime_error("SSL_CTX_new failed");
-        // Multithreading
-        openssl_mutexes.resize(CRYPTO_num_locks(), PTHREAD_MUTEX_INITIALIZER);
-        CRYPTO_set_id_callback(openssl_thread_id);
-        CRYPTO_set_locking_callback(openssl_locking_callback);
-
+        detail::init_openssl();
         //Linux sends a sigpipe when a socket or pipe has an error. better to handle the error where it
         //happens at the read/write site
         signal(SIGPIPE, SIG_IGN);

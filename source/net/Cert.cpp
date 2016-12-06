@@ -1,6 +1,7 @@
+#define _CRT_SECURE_NO_DEPRECATE
 #include "net/Cert.hpp"
 #include <cassert>
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(HTTP_USE_OPENSSL)
 #   include <Windows.h>
 #   include <memory>
 #   include <vector>
@@ -16,7 +17,7 @@ namespace http
 {
     PrivateCert::PrivateCert(PrivateCert &&mv) : native(mv.native) { mv.native = nullptr; }
     PrivateCert::~PrivateCert() { if (native) free(native); }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(HTTP_USE_OPENSSL)
     namespace
     {
         /**LocalAlloc / LocalFree memory.*/
@@ -180,7 +181,7 @@ namespace http
     {
         void operator()(PKCS12 *pfx)const { PKCS12_free(pfx); }
     };
-    
+
     OpenSslPrivateCertData::~OpenSslPrivateCertData()
     {
         EVP_PKEY_free(pkey);
@@ -215,7 +216,7 @@ namespace http
         return out;
     }
 
-    PrivateCert load_pem_priv_cert(const std::string &crt_file, const std::string &key_file)
+    PrivateCert load_pem_priv_cert(const std::string &, const std::string &)
     {
         std::terminate();
     }

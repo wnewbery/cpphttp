@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpphttp", "cpphttp.vcxproj", "{53A098C1-A321-4D50-AB68-1B46FF556100}"
 EndProject
@@ -14,6 +14,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		DebugOpenSSL|x64 = DebugOpenSSL|x64
+		DebugOpenSSL|x86 = DebugOpenSSL|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
@@ -22,6 +24,10 @@ Global
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Debug|x64.Build.0 = Debug|x64
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Debug|x86.ActiveCfg = Debug|Win32
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Debug|x86.Build.0 = Debug|Win32
+		{53A098C1-A321-4D50-AB68-1B46FF556100}.DebugOpenSSL|x64.ActiveCfg = DebugOpenSSL|x64
+		{53A098C1-A321-4D50-AB68-1B46FF556100}.DebugOpenSSL|x64.Build.0 = DebugOpenSSL|x64
+		{53A098C1-A321-4D50-AB68-1B46FF556100}.DebugOpenSSL|x86.ActiveCfg = DebugOpenSSL|Win32
+		{53A098C1-A321-4D50-AB68-1B46FF556100}.DebugOpenSSL|x86.Build.0 = DebugOpenSSL|Win32
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Release|x64.ActiveCfg = Release|x64
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Release|x64.Build.0 = Release|x64
 		{53A098C1-A321-4D50-AB68-1B46FF556100}.Release|x86.ActiveCfg = Release|Win32
@@ -30,6 +36,10 @@ Global
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Debug|x64.Build.0 = Debug|x64
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Debug|x86.ActiveCfg = Debug|Win32
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Debug|x86.Build.0 = Debug|Win32
+		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.DebugOpenSSL|x64.ActiveCfg = DebugOpenSSL|x64
+		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.DebugOpenSSL|x64.Build.0 = DebugOpenSSL|x64
+		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.DebugOpenSSL|x86.ActiveCfg = DebugOpenSSL|Win32
+		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.DebugOpenSSL|x86.Build.0 = DebugOpenSSL|Win32
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Release|x64.ActiveCfg = Release|x64
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Release|x64.Build.0 = Release|x64
 		{1FCCDC8C-F6C8-47DA-8442-EB43E8170364}.Release|x86.ActiveCfg = Release|Win32

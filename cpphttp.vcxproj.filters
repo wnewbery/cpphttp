@@ -132,9 +132,6 @@
     <ClInclude Include="include\http\net\SchannelListenSocket.hpp">
       <Filter>include\net</Filter>
     </ClInclude>
-    <ClInclude Include="source\net\Schannel.hpp">
-      <Filter>source\net</Filter>
-    </ClInclude>
     <ClInclude Include="source\net\SocketUtils.hpp">
       <Filter>source\net</Filter>
     </ClInclude>
@@ -145,6 +142,12 @@
       <Filter>include\net</Filter>
     </ClInclude>
     <ClInclude Include="include\http\net\AsyncIo.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\net\Schannel.hpp">
+      <Filter>include\net</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http\net\OpenSsl.hpp">
       <Filter>include\net</Filter>
     </ClInclude>
   </ItemGroup>
@@ -222,6 +225,9 @@
       <Filter>source\net</Filter>
     </ClCompile>
     <ClCompile Include="source\net\AsyncIo.cpp">
+      <Filter>source\net</Filter>
+    </ClCompile>
+    <ClCompile Include="source\net\OpenSsl.cpp">
       <Filter>source\net</Filter>
     </ClCompile>
   </ItemGroup>

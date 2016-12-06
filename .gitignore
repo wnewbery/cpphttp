@@ -13,3 +13,5 @@
 /coverage
 /obj
 /api_docs
+/third_party/openssl
+/x64-DebugOpenSSL

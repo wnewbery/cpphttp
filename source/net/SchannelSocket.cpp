@@ -1,14 +1,13 @@
 #include "net/SchannelSocket.hpp"
 #include "net/Net.hpp"
-#include "Schannel.hpp"
+#include "net/Schannel.hpp"
 #include "String.hpp"
 #include <cassert>
 #include <algorithm>
 
 namespace http
 {
-    extern SecurityFunctionTableW *sspi; //http::init_net, Net.cpp
-
+    using namespace detail;
     namespace
     {
         static const DWORD SSPI_FLAGS = ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT |

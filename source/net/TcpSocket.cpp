@@ -193,7 +193,7 @@ namespace http
 
         static char buffer[1];
         aio.recv(socket, buffer, 1,
-            [this, handler](size_t len)
+            [this, handler](size_t)
             {
                 closesocket(socket);
                 socket = INVALID_SOCKET;

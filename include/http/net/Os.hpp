@@ -1,20 +1,27 @@
 #pragma once
+#if !defined(_WIN32) && !defined(HTTP_USE_OPENSSL)
+#   define HTTP_USE_OPENSSL
+#endif
+
 #ifdef _WIN32
+
 #ifndef NOMINMAX
 #   define NOMINMAX
 #endif
 #ifndef SECURITY_WIN32
 #   define SECURITY_WIN32
 #endif
+#if !defined(WIN32_MEAN_AND_LEAN) && !defined(HTTP_NO_WIN32_MEAN_AND_LEAN)
+#   define WIN32_MEAN_AND_LEAN
+#endif
+
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
 #include <Windows.h>
-#include <schannel.h>
-#include <security.h>
 
+#pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Crypt32.lib")
 #pragma comment(lib, "Secur32.lib")
-#pragma comment(lib, "Ws2_32.lib")
 #else
 
 #include <arpa/inet.h>
