@@ -44,16 +44,8 @@ namespace http
             http::AsyncIo::SendHandler, http::AsyncIo::ErrorHandler)override {}
 
     protected:
-        struct SslDeleter
-        {
-            void operator()(SSL *ssl)const;
-            void operator()(SSL_CTX *ctx)const
-            {
-                if (ctx) SSL_CTX_free(ctx);
-            }
-        };
         TcpSocket tcp;
-        std::unique_ptr<SSL, SslDeleter> ssl;
+        std::unique_ptr<SSL, detail::OpenSslDeleter> ssl;
     };
     /**Server side OpenSSL socket. Presents a certificate on connection.*/
     class OpenSslServerSocket : public OpenSslSocket
@@ -69,6 +61,6 @@ namespace http
         void async_create(AsyncIo &, TcpSocket &&, const PrivateCert &,
             std::function<void()>, AsyncIo::ErrorHandler) {}
     protected:
-        std::unique_ptr<SSL_CTX, SslDeleter> openssl_ctx;
+        std::unique_ptr<SSL_CTX, detail::OpenSslDeleter> openssl_ctx;
     };
 }

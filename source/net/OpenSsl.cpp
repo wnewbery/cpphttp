@@ -13,9 +13,9 @@ namespace http
 {
     namespace detail
     {
-        SSL_CTX* openssl_ctx;
+        std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_ctx;
         const SSL_METHOD *openssl_method;
-        SSL_CTX* openssl_server_ctx;
+        std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_server_ctx;
         const SSL_METHOD *openssl_server_method;
 
         std::string openssl_err_str(SSL *ssl, int error)
@@ -63,14 +63,14 @@ namespace http
 
             // Client
             openssl_method = SSLv23_client_method();//TLS_client_method();
-            openssl_ctx = SSL_CTX_new(openssl_method);
+            openssl_ctx.reset(SSL_CTX_new(openssl_method));
             if (!openssl_ctx) throw std::runtime_error("SSL_CTX_new failed");
             // Load default trust roots
-            if (!SSL_CTX_set_default_verify_paths(openssl_ctx))
+            if (!SSL_CTX_set_default_verify_paths(openssl_ctx.get()))
                 throw std::runtime_error("SSL_CTX_set_default_verify_paths failed");
             // Server
             openssl_server_method = SSLv23_server_method();
-            openssl_server_ctx = SSL_CTX_new(openssl_server_method);
+            openssl_server_ctx.reset(SSL_CTX_new(openssl_server_method));
             if (!openssl_server_ctx) throw std::runtime_error("SSL_CTX_new failed");
             // Multi-threading
             openssl_mutexes.reset(new std::mutex[CRYPTO_num_locks()]);

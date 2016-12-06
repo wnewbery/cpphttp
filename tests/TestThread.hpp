@@ -1,6 +1,7 @@
 #pragma once
-#include <thread>
 #include <functional>
+#include <thread>
+#include <typeinfo>
 #include <boost/test/unit_test.hpp>
 #ifdef _WIN32
 #   include <Windows.h>
@@ -23,7 +24,7 @@ public:
             }
             catch (const std::exception &e)
             {
-                BOOST_ERROR(std::string("Unexpected exception: ") + e.what());
+                BOOST_ERROR(std::string("Unexpected exception: ") + typeid(e).name() + " " + e.what());
             }
         };
     }

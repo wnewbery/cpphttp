@@ -1,6 +1,7 @@
 #pragma once
 #include "Os.hpp"
 #include "Net.hpp"
+#include <memory>
 #include <string>
 #include <openssl/opensslconf.h>
 #include <openssl/ssl.h>
@@ -15,9 +16,21 @@ namespace http
 {
     namespace detail
     {
-        extern SSL_CTX* openssl_ctx;
+        struct OpenSslDeleter
+        {
+            void operator()(SSL *ssl)const
+            {
+                if (ssl) SSL_free(ssl);
+            }
+            void operator()(SSL_CTX *ctx)const
+            {
+                if (ctx) SSL_CTX_free(ctx);
+            }
+        };
+
+        extern std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_ctx;
         extern const SSL_METHOD *openssl_method;
-        extern SSL_CTX* openssl_server_ctx;
+        extern std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_server_ctx;
         extern const SSL_METHOD *openssl_server_method;
 
         /**Get a descriptive error string for an OpenSSL error code.*/

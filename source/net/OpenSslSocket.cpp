@@ -19,11 +19,6 @@ namespace http
 {
     using namespace detail;
 
-    void OpenSslSocket::SslDeleter::operator()(SSL *ssl)const
-    {
-        SSL_free(ssl);
-    }
-
     OpenSslSocket::OpenSslSocket() : tcp(), ssl(nullptr)
     {
     }
@@ -40,7 +35,7 @@ namespace http
     {
         tcp.connect(host, port);
 
-        ssl.reset(SSL_new(openssl_ctx));
+        ssl.reset(SSL_new(openssl_ctx.get()));
 
         //Currently only supporting blocking sockets, so dont care about renegotiation details
         SSL_set_mode(ssl.get(), SSL_MODE_AUTO_RETRY);

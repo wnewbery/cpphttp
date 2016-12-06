@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <typeinfo>
 
 namespace http
 {
@@ -35,10 +36,8 @@ namespace http
                     auto tls = new TlsServerSocket();
                     socket.reset(tls);
                     tls->async_create(server->aio, std::move(raw_socket), listener->tls_cert,
-                        [this]() { start_request(); },
-                        [this]() {
-                            delete this;
-                    });
+                        std::bind(&CoreServer::Connection::io_error, this),
+                        [this]() { delete this; });
                 }
                 else
                 {
@@ -87,21 +86,29 @@ namespace http
         /**Receive part of a request into buffer.*/
         void recv_request(size_t len)
         {
-            if (len == 0)
+            try
             {
-                // Client closed the connection
-                delete this;
+                if (len == 0)
+                {
+                    // Client closed the connection
+                    delete this;
+                }
+                else
+                {
+                    buffer_len += len;
+
+                    auto end = parser.read(buffer, buffer + buffer_len);
+                    buffer_len -= end - buffer;
+                    memmove(buffer, end, buffer_len);
+
+                    if (parser.is_completed()) handle_request();
+                    else start_recv_request();
+                }
             }
-            else
+            catch (const std::exception &e)
             {
-                buffer_len += len;
-
-                auto end = parser.read(buffer, buffer + buffer_len);
-                buffer_len -= end - buffer;
-                memmove(buffer, end, buffer_len);
-
-                if (parser.is_completed()) handle_request();
-                else start_recv_request();
+                std::cerr << typeid(e).name() << ' ' << e.what() << std::endl;
+                delete this;
             }
         }
         /**Handle the request, called once recv_request has parsed the entire request message.
@@ -110,19 +117,19 @@ namespace http
          */
         void handle_request()
         {
-            Request req =
-            {
-                method_from_string(parser.method()),
-                parser.uri(),
-                Url::parse_request(parser.uri()),
-                std::move(parser.headers()),
-                std::move(parser.body())
-            };
-
-            keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
-
             try
             {
+                Request req =
+                {
+                    method_from_string(parser.method()),
+                    parser.uri(),
+                    Url::parse_request(parser.uri()),
+                    std::move(parser.headers()),
+                    std::move(parser.body())
+                };
+
+                keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
+
                 response = server->handle_request(req);
             }
             catch (const ErrorResponse &err)
@@ -160,7 +167,9 @@ namespace http
             }
             else if (!response.body.empty())
             {
-                throw std::runtime_error("HTTP forbids this response from having a body");
+                std::cerr << "HTTP forbids this response from having a body" << std::endl;
+                delete this;
+                return;
             }
 
             add_default_headers(response);
