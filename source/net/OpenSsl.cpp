@@ -13,6 +13,7 @@ namespace http
 {
     namespace detail
     {
+        std::unique_ptr<std::mutex[]> openssl_mutexes;
         std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_ctx;
         const SSL_METHOD *openssl_method;
         std::unique_ptr<SSL_CTX, OpenSslDeleter> openssl_server_ctx;
@@ -29,7 +30,6 @@ namespace http
             else return errno_string(ret);
         }
 
-        std::unique_ptr<std::mutex[]> openssl_mutexes;
         unsigned long openssl_thread_id(void)
         {
 #ifdef _WIN32

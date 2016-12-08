@@ -4,6 +4,8 @@
 #include "net/Cert.hpp"
 #include "net/Net.hpp"
 #include "../TestThread.hpp"
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 using namespace http;
@@ -12,10 +14,21 @@ BOOST_AUTO_TEST_SUITE(TestTlsServer)
 
 static const uint16_t BASE_PORT = 5000;
 
-void success_server_thread()
+struct Event
+{
+    bool ready = false;
+    std::mutex mutex;
+    std::condition_variable cv;
+};
+void success_server_thread(Event &event)
 {
     TlsListenSocket listen("127.0.0.1", BASE_PORT, load_pfx_cert("localhost.pfx", "password"));
-
+    
+    {
+        std::unique_lock<std::mutex> lock(event.mutex);
+        event.ready = true;
+        event.cv.notify_all();
+    }
     {
         auto sock = listen.accept();
 
@@ -44,8 +57,12 @@ void success_server_thread()
 }
 BOOST_AUTO_TEST_CASE(success)
 {
-    TestThread server(&success_server_thread);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    Event event;
+    TestThread server([&event]{ success_server_thread(event); });
+    {
+        std::unique_lock<std::mutex> lock(event.mutex);
+        event.cv.wait(lock, [&event]{ return event.ready; });
+    }
     {
         TlsSocket sock("localhost", BASE_PORT);
         sock.send_all("ping", 4);

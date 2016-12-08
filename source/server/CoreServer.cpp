@@ -41,7 +41,7 @@ namespace http
                 }
                 else
                 {
-                    socket = std::make_unique<TcpSocket>(std::move(raw_socket));
+                    socket.reset(new TcpSocket(std::move(raw_socket)));
                     start_request();
                 }
             }
