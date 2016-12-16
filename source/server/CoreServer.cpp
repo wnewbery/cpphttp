@@ -281,6 +281,7 @@ namespace http
     }
     void CoreServer::accept_error()
     {
+        // TODO: Better handle errors
         // Rethrow anything except AsyncAborted. Will kill the server instance.
         try { throw; }
         catch (const AsyncAborted &) {}

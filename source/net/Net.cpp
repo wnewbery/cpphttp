@@ -60,6 +60,9 @@ namespace http
             throw std::runtime_error("strerror_s failed");
         return buffer;
     }
+    WinError::WinError(const char *msg)
+        : WinError(msg, GetLastError())
+    {}
 }
 #else
 #include <cstring> //strerror_r

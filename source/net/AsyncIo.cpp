@@ -3,11 +3,13 @@
 #include "net/TcpSocket.hpp"
 #include "net/TcpListenSocket.hpp"
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <cassert>
-
+#include <mswsock.h> // AcceptEx
 namespace http
 {
+    #ifdef HTTP_USE_SELECT
     namespace
     {
         struct FdSets
@@ -97,9 +99,6 @@ namespace http
     AsyncIo::~AsyncIo()
     {
     }
-
-
-
     void AsyncIo::run()
     {
         std::unique_lock<std::mutex> exit_lock(exit_mutex);
@@ -213,9 +212,9 @@ namespace http
                             }
                         }
                     }
-                    catch (const std::exception &)
+                    catch (const std::exception &e)
                     {
-                        op.error();
+                        call_error(e, send->error);
                     }
                 }
                 ++i;
@@ -225,12 +224,12 @@ namespace http
         // Abort
         {
             std::unique_lock<std::mutex> lock(mutex);
-            for (auto &i : in_progress.accept) do_abort(i);
-            for (auto &i : in_progress.recv) for (auto &j : i.second) do_abort(j);
-            for (auto &i : in_progress.send) for (auto &j : i.second) do_abort(j);
-            for (auto &i : new_operations.accept) do_abort(i);
-            for (auto &i : new_operations.recv) do_abort(i);
-            for (auto &i : new_operations.send) do_abort(i);
+            for (auto &i : in_progress.accept) do_abort(i.error);
+            for (auto &i : in_progress.recv) for (auto &j : i.second) do_abort(j.error);
+            for (auto &i : in_progress.send) for (auto &j : i.second) do_abort(j.error);
+            for (auto &i : new_operations.accept) do_abort(i.error);
+            for (auto &i : new_operations.recv) do_abort(i.error);
+            for (auto &i : new_operations.send) do_abort(i.error);
 
             in_progress.accept.clear();
             in_progress.recv.clear();
@@ -266,5 +265,252 @@ namespace http
     {
         std::unique_lock<std::mutex> lock(mutex);
         new_operations.send.emplace_back(Send{ true, sock, buffer, len, 0, handler, error });
+    }
+    #endif
+
+
+    #ifdef HTTP_USE_IOCP
+    AsyncIo::CompletionPort::CompletionPort()
+    {
+        port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
+        if (!port) throw WinError("CreateIoCompletionPort");
+    }
+    AsyncIo::CompletionPort::~CompletionPort()
+    {
+        CloseHandle(port);
+    }
+    void AsyncIo::Operation::delete_this()
+    {
+        switch (type)
+        {
+        case ACCEPT: return delete (Accept*)this;
+        case RECV: return delete (Recv*)this;
+        case SEND: return delete (Send*)this;
+        default:
+            assert(type == SEND_ALL);
+            return delete (SendAll*)this;
+        }
+    }
+    AsyncIo::Accept::Accept(SOCKET sock, AcceptHandler handler, ErrorHandler error)
+        : Operation(sock, ACCEPT, nullptr, 0, error)
+        , handler(handler)
+        , client_sock(create_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))
+    {
+        if (client_sock == INVALID_SOCKET) throw SocketError("socket");
+    }
+    AsyncIo::Accept::~Accept()
+    {
+        if (client_sock != INVALID_SOCKET) closesocket(client_sock);
+    }
+    AsyncIo::AsyncIo()
+        : iocp(), exit_mutex(), running(true), inprogess_operations()
+    {
+    }
+    AsyncIo::~AsyncIo()
+    {
+        assert(!running);
+        assert(inprogess_operations.empty());
+    }
+    void AsyncIo::run()
+    {
+        std::unique_lock<std::mutex> lock(exit_mutex);
+        iocp_loop();
+    }
+    void AsyncIo::exit()
+    {
+        running = false;
+        {
+            // Cancel anything in progress
+            std::unique_lock<std::mutex> lock(mutex);
+            for (auto &op : inprogess_operations)
+                CancelIoEx((HANDLE)op->sock, NULL);
+        }
+        PostQueuedCompletionStatus(iocp.port, 0, NULL, NULL);
+        std::unique_lock<std::mutex> lock(exit_mutex);
+        assert(inprogess_operations.empty());
+    }
+
+    void AsyncIo::accept(SOCKET sock, AcceptHandler handler, ErrorHandler error)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!start_operation(sock, error)) return;
+        std::unique_ptr<Accept, Operation::Deleter> op(new Accept(sock, handler, error));
+        auto ret = AcceptEx(sock, op->client_sock, op->accept_buffer, 0, op->addr_len, op->addr_len, nullptr, &op->overlapped);
+        auto err = WSAGetLastError();
+        if (!ret || err == WSA_IO_PENDING)
+        {
+            auto p = op.get();
+            inprogess_operations.push_back(std::move(op));
+            p->it = --inprogess_operations.end();
+        }
+        else throw SocketError("AcceptEx");
+    }
+    void AsyncIo::recv(SOCKET sock, void *buffer, size_t len, RecvHandler handler, ErrorHandler error)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!start_operation(sock, error)) return;
+        Operation::Ptr op(new Recv(sock, buffer, len, handler, error));
+        DWORD flags = 0;
+        auto ret = WSARecv(sock, &op->buffer, 1, nullptr, &flags, &op->overlapped, nullptr);
+        auto err = WSAGetLastError();
+        if (!ret || err == WSA_IO_PENDING)
+        {
+            auto p = op.get();
+            inprogess_operations.push_back(std::move(op));
+            p->it = --inprogess_operations.end();
+        }
+        else throw SocketError(err);
+    }
+    void AsyncIo::send(SOCKET sock, const void *buffer, size_t len, SendHandler handler, ErrorHandler error)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!start_operation(sock, error)) return;
+
+        Operation::Ptr op(new Send(sock, buffer, len, handler, error));
+        auto ret = WSASend(sock, &op->buffer, 1, nullptr, 0, &op->overlapped, nullptr);
+        auto err = WSAGetLastError();
+        if (!ret || err == WSA_IO_PENDING)
+        {
+            auto p = op.get();
+            inprogess_operations.push_back(std::move(op));
+            p->it = --inprogess_operations.end();
+        }
+        else throw SocketError(err);
+    }
+    void AsyncIo::send_all(SOCKET sock, const void *buffer, size_t len, SendHandler handler, ErrorHandler error)
+    {
+        send_all_next(std::unique_ptr<SendAll, Operation::Deleter>(
+            new SendAll(sock, buffer, len, handler, error)), 0);
+    }
+    void AsyncIo::iocp_loop()
+    {
+        while (running || !inprogess_operations.empty())
+        {
+            DWORD bytes;
+            ULONG_PTR completion_key;
+            OVERLAPPED *overlapped = nullptr;
+            auto ret = GetQueuedCompletionStatus(iocp.port, &bytes, &completion_key, &overlapped, INFINITE);
+            auto err = GetLastError();
+            if (!overlapped)
+            {
+                if (ret) continue;
+                else throw WinError("GetQueuedCompletionStatus failed", err);
+            }
+
+            Operation::Ptr op;
+
+            {
+                // Take ownership of operation and erase from list
+                std::unique_lock<std::mutex> lock(mutex);
+                auto *tmp = (Operation*)overlapped;
+                assert((void*)tmp == (void*)&tmp->overlapped);
+                op = std::move(*tmp->it);
+                inprogess_operations.erase(op->it);
+            }
+
+            try
+            {
+                if (!ret)
+                {
+                    assert(err != S_OK);
+                    if (err == ERROR_OPERATION_ABORTED) throw AsyncAborted();
+                    else  throw SocketError(err);
+                }
+                if (op->type == Operation::ACCEPT)
+                {
+                    auto accept = (Accept*)op.get();
+                    sockaddr *local_addr, *remote_addr;
+                    int local_addr_len, remote_addr_len;
+                    GetAcceptExSockaddrs(
+                        accept->accept_buffer,
+                        0, accept->addr_len, accept->addr_len,
+                        &local_addr, &local_addr_len, &remote_addr, &remote_addr_len);
+                    TcpSocket sock(accept->client_sock, remote_addr);
+                    accept->client_sock = INVALID_SOCKET;
+                    accept->handler(std::move(sock));
+                }
+                else if (op->type == Operation::RECV)
+                {
+                    auto recv = (Send*)op.get();
+                    recv->handler(bytes);
+                }
+                else if (op->type == Operation::SEND)
+                {
+                    auto send = (Send*)op.get();
+                    send->handler(bytes);
+                }
+                else
+                {
+                    assert(op->type == Operation::SEND_ALL);
+                    send_all_next(std::unique_ptr<SendAll, Operation::Deleter>((SendAll*)op.release()), bytes);
+                }
+            }
+            catch (const std::exception &e)
+            {
+                call_error(e, op->error);
+            }
+        }
+    }
+    bool AsyncIo::start_operation(SOCKET sock, ErrorHandler error)
+    {
+        if (running)
+        {
+            CreateIoCompletionPort((HANDLE)sock, iocp.port, (ULONG_PTR)sock, 0);
+            return true;
+        }
+        else
+        {
+            do_abort(error);
+            return false;
+        }
+    }
+    void AsyncIo::send_all_next(std::unique_ptr<SendAll, Operation::Deleter> send, size_t sent)
+    {
+        try
+        {
+            send->sent += sent;
+            assert(send->sent <= send->len);
+            if (send->sent == send->len)
+            {
+                send->handler(send->sent);
+            }
+            else
+            {
+                typedef decltype(send->buffer.len) len_t;
+                std::unique_lock<std::mutex> lock(mutex);
+                if (!start_operation(send->sock, send->error)) return;
+                send->buffer.buf += sent;
+                send->buffer.len = (len_t)std::min<size_t>(std::numeric_limits<len_t>::max(), send->len - send->sent);
+                auto ret = WSASend(send->sock, &send->buffer, 1, nullptr, 0, &send->overlapped, nullptr);
+                auto err = WSAGetLastError();
+                if (!ret || err == WSA_IO_PENDING)
+                {
+                    auto p = send.get();
+                    inprogess_operations.push_back(std::move(send));
+                    p->it = --inprogess_operations.end();
+                }
+                else throw SocketError(err);
+            }
+        }
+        catch (const std::exception &e)
+        {
+            call_error(e, send->error);
+        }
+    }
+    #endif
+
+    void AsyncIo::call_error(const std::exception &e, const ErrorHandler &handler)
+    {
+        (void)e;
+        try
+        {
+            handler();
+        }
+        catch (const std::exception &e2)
+        {
+            std::cerr << "Unexpected exception from AsyncIo error handler.\n";
+            std::cerr << e2.what();
+            std::terminate();
+        }
     }
 }

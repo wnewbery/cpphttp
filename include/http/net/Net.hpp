@@ -102,4 +102,19 @@ namespace http
         {
         }
     };
+
+    #ifdef _WIN32
+    /**Windows error not directly related to a socket.*/
+    class WinError : public std::runtime_error
+    {
+    public:
+        WinError(const std::string &msg, int code)
+            : std::runtime_error(msg + " " + win_error_string(code))
+        {}
+        WinError(const char *msg, int code)
+            : WinError(std::string(msg), code)
+        {}
+        explicit WinError(const char *msg);
+    };
+    #endif
 }

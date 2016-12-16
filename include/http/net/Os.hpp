@@ -1,6 +1,13 @@
 #pragma once
 #if !defined(_WIN32) && !defined(HTTP_USE_OPENSSL)
-#   define HTTP_USE_OPENSSL
+    #define HTTP_USE_OPENSSL
+#endif
+#if !defined(HTTP_USE_SELECT) && !defined(HTTP_USE_IOCP)
+    #ifdef _WIN32
+        #define HTTP_USE_IOCP
+    #else
+        #define HTTP_USE_SELECT
+    #endif
 #endif
 
 #ifdef _WIN32
@@ -22,6 +29,15 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Crypt32.lib")
 #pragma comment(lib, "Secur32.lib")
+#pragma comment(lib, "Mswsock.lib")
+
+namespace http
+{
+    inline SOCKET create_socket(int af = AF_INET, int type = SOCK_STREAM, int prot = IPPROTO_TCP)
+    {
+        return WSASocket(af, type, prot, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    }
+}
 #else
 
 #include <arpa/inet.h>
@@ -41,6 +57,10 @@ namespace http
     static const int SD_SEND = SHUT_WR;
     static const int SD_BOTH = SHUT_RDWR;
 
+    inline SOCKET create_socket(int af = AF_INET, int type = SOCK_STREAM, int prot = IPPROTO_TCP)
+    {
+        return ::socket(af, type, prot);
+    }
     //On Windows file descriptors and sockets are different. But on Linux all sockets are file descriptors.
     inline void closesocket(SOCKET socket)
     {

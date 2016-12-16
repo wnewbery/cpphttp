@@ -7,7 +7,7 @@ namespace http
     TcpListenSocket::TcpListenSocket(const std::string &bind, uint16_t port)
         : socket(INVALID_SOCKET)
     {
-        socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        socket = create_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (socket == INVALID_SOCKET) throw std::runtime_error("Failed to create listen socket");
         //allow fast restart
 #ifndef _WIN32
