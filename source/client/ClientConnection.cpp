@@ -66,6 +66,11 @@ namespace http
         resp.headers = std::move(parser.headers());
         resp.body = std::move(parser.body());
         resp.status = std::move(parser.status());
+
+        if (resp.headers.get("Connection") != "keep-alive")
+        {
+            socket = nullptr;
+        }
         return resp;
     }
 }
