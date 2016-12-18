@@ -88,7 +88,7 @@ namespace http
             else
             {
                 out += '%';
-                out += hex_chr((char)(c >> 4));
+                out += hex_chr((char)(((unsigned char)c) >> 4));
                 out += hex_chr((char)(c & 0x0F));
             }
         }
