@@ -3,6 +3,7 @@
 #include "../net/TcpListenSocket.hpp"
 #include "../net/Cert.hpp"
 #include <atomic>
+#include <future>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -68,6 +69,8 @@ namespace http
         std::vector<Listener> listeners;
         /**Held by run(), preventing exit() from continueing until run() is finished.*/
         std::mutex running_mutex;
+        std::mutex handle_mutex;
+        std::vector<std::future<void>> in_progress_handlers;
 
         void accept_next(Listener &listener);
         void accept(Listener &listener, TcpSocket &&sock);

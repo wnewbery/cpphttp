@@ -12,6 +12,7 @@
 #include "Error.hpp"
 #include <cassert>
 #include <cstring>
+#include <chrono>
 #include <iostream>
 #include <typeinfo>
 
@@ -119,64 +120,74 @@ namespace http
          */
         void handle_request()
         {
-            try
+            std::unique_lock<std::mutex> lock(server->handle_mutex);
+            for (auto i = server->in_progress_handlers.begin(); i != server->in_progress_handlers.end();)
             {
-                Request req =
+                if (i->wait_for(std::chrono::seconds(0)) != std::future_status::timeout)
+                    i = server->in_progress_handlers.erase(i);
+                else ++i;
+            }
+            server->in_progress_handlers.push_back(std::async([this]()
+            {
+                try
                 {
-                    method_from_string(parser.method()),
-                    parser.uri(),
-                    Url::parse_request(parser.uri()),
-                    std::move(parser.headers()),
-                    std::move(parser.body())
-                };
+                    Request req =
+                    {
+                        method_from_string(parser.method()),
+                        parser.uri(),
+                        Url::parse_request(parser.uri()),
+                        std::move(parser.headers()),
+                        std::move(parser.body())
+                    };
 
-                keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
+                    keep_alive = ieq(req.headers.get("Connection"), "keep-alive");
 
-                response = server->handle_request(req);
-            }
-            catch (const ErrorResponse &err)
-            {
-                keep_alive = false;
-                response.status.code = (StatusCode)err.status_code();
-                response.body = err.what();
-                response.headers.add("Content-Type", "text/plain");
-            }
-            catch (const std::exception &err)
-            {
-                keep_alive = false;
-                response.status.code = SC_INTERNAL_SERVER_ERROR;
-                response.body = err.what();
-                response.headers.add("Content-Type", "text/plain");
-            }
+                    response = server->handle_request(req);
+                }
+                catch (const ErrorResponse &err)
+                {
+                    keep_alive = false;
+                    response.status.code = (StatusCode)err.status_code();
+                    response.body = err.what();
+                    response.headers.add("Content-Type", "text/plain");
+                }
+                catch (const std::exception &err)
+                {
+                    keep_alive = false;
+                    response.status.code = SC_INTERNAL_SERVER_ERROR;
+                    response.body = err.what();
+                    response.headers.add("Content-Type", "text/plain");
+                }
 
-            if (response.status.msg.empty())
-            {
-                response.status.msg = default_status_msg(response.status.code);
-            }
-            response.headers.set("Connection", keep_alive ? "keep-alive" : "close");
+                if (response.status.msg.empty())
+                {
+                    response.status.msg = default_status_msg(response.status.code);
+                }
+                response.headers.set("Connection", keep_alive ? "keep-alive" : "close");
 
-            // Send response
-            auto sc = response.status.code;
-            // For certain response codes, there must not be a message body
-            bool message_body_allowed = sc != 204 && sc != 205 && sc != 304;
-            // For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
-            response_has_body = !response.body.empty() && message_body_allowed && parser.method() != "HEAD";
+                // Send response
+                auto sc = response.status.code;
+                // For certain response codes, there must not be a message body
+                bool message_body_allowed = sc != 204 && sc != 205 && sc != 304;
+                // For HEAD requests, Content-Length etc. should be determined, but the body must not be sent
+                response_has_body = !response.body.empty() && message_body_allowed && parser.method() != "HEAD";
 
-            if (message_body_allowed)
-            {
-                //TODO: Support chunked streams in the future
-                response.headers.set("Content-Length", std::to_string(response.body.size()));
-            }
-            else if (!response.body.empty())
-            {
-                std::cerr << "HTTP forbids this response from having a body" << std::endl;
-                delete this;
-                return;
-            }
+                if (message_body_allowed)
+                {
+                    //TODO: Support chunked streams in the future
+                    response.headers.set("Content-Length", std::to_string(response.body.size()));
+                }
+                else if (!response.body.empty())
+                {
+                    std::cerr << "HTTP forbids this response from having a body" << std::endl;
+                    delete this;
+                    return;
+                }
 
-            add_default_headers(response);
+                add_default_headers(response);
 
-            send_response();
+                send_response();
+            }));
         }
         /**Starts sending a response. Calls send_response_body on completion.*/
         void send_response()
@@ -266,6 +277,9 @@ namespace http
             // Clean up is done by run(). Wait for it.
             lock.lock();
         }
+        std::unique_lock<std::mutex> lock2(handle_mutex);
+        for (auto &i : in_progress_handlers) i.wait();
+        in_progress_handlers.clear();
     }
     void CoreServer::accept_next(Listener &listener)
     {
