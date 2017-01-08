@@ -26,6 +26,7 @@ namespace http
     void ClientConnection::send_request(Request &request)
     {
         assert(socket);
+        request.headers.set_default("Connection", "keep-alive");
         add_default_headers(request);
         http::send_request(socket.get(), request);
 

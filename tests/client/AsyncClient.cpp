@@ -198,6 +198,7 @@ BOOST_AUTO_TEST_CASE(parallel)
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/plain\r\n"
         "Content-Length: 10\r\n"
+        "Connection: keep-alive\r\n"
         "\r\n"
         "0123456789";
 

@@ -14,6 +14,7 @@ BOOST_AUTO_TEST_CASE(test)
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/plain\r\n"
         "Content-Length: 10\r\n"
+        "Connection: keep-alive\r\n"
         "\r\n"
         "0123456789";
 
@@ -27,6 +28,7 @@ BOOST_AUTO_TEST_CASE(test)
 
         auto resp = client.make_request(req);
 
+        BOOST_REQUIRE(socket_factory.alive_sockets.count(socket_factory.last) > 0);
         BOOST_CHECK_EQUAL("", socket_factory.last->recv_remaining());
         BOOST_CHECK_EQUAL("localhost:80", req.headers.get("Host"));
         BOOST_CHECK_EQUAL("test", req.headers.get("User-Agent"));
@@ -40,6 +42,7 @@ BOOST_AUTO_TEST_CASE(test)
     socket_factory.last->recv_buffer =
         "HTTP/1.1 204 No Content\r\n"
         "Server: example\r\n"
+        "Connection: keep-alive\r\n"
         "\r\n";
     {
         Request req;
@@ -49,6 +52,7 @@ BOOST_AUTO_TEST_CASE(test)
 
         auto resp = client.make_request(req);
 
+        BOOST_REQUIRE(socket_factory.alive_sockets.count(socket_factory.last) > 0);
         BOOST_CHECK_EQUAL("", socket_factory.last->recv_remaining());
         BOOST_CHECK_EQUAL("localhost:80", req.headers.get("Host"));
         BOOST_CHECK_EQUAL("test", req.headers.get("User-Agent"));

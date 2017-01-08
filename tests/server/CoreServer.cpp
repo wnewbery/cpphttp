@@ -104,8 +104,7 @@ BOOST_AUTO_TEST_CASE(keep_alive)
 
         auto resp = conn.make_request(req);
         BOOST_CHECK_EQUAL("close", resp.headers.get("Connection"));
-
-        BOOST_CHECK_THROW(conn.make_request(req), std::runtime_error);
+        BOOST_CHECK(!conn.is_connected());
     }
 
     {
@@ -118,7 +117,7 @@ BOOST_AUTO_TEST_CASE(keep_alive)
 
         auto resp = conn.make_request(req);
         BOOST_CHECK_EQUAL("keep-alive", resp.headers.get("Connection"));
-
+        BOOST_CHECK(conn.is_connected());
         BOOST_CHECK_NO_THROW(conn.make_request(req));
     }
 
