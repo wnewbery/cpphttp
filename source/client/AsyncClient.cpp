@@ -4,6 +4,7 @@
 #include "net/Socket.hpp"
 #include "util/Thread.hpp"
 #include <cassert>
+#include <iostream>
 namespace http
 {
     AsyncRequest::~AsyncRequest()
@@ -21,7 +22,7 @@ namespace http
     AsyncClient::AsyncClient(const AsyncClientParams & _params)
         : params(_params)
         , mutex(), threads(), request_queue(), condition_var(), exiting(false)
-        , rate_limit(params.rate_limit), rate_limit_time(time(nullptr))
+        , rate_limit(params.rate_limit), rate_limit_time(0)
     {
         params.default_headers.set_default("Host", params.host + ":" + std::to_string(params.port));
 
@@ -116,6 +117,7 @@ namespace http
         }
         else
         {   //Wait for reset second
+            std::cout << "Reached client rate limit" << std::endl;
             std::this_thread::sleep_until(steady_clock::time_point(rate_limit_time));
         }
         rate_limit = params.rate_limit;
@@ -152,7 +154,6 @@ namespace http
                     break;
                 }
             }
-
             process_request(request);
         }
     }
@@ -167,6 +168,7 @@ namespace http
             {
                 request->headers.set_default(header.first, header.second);
             }
+            client->rate_limit_wait();
             //Send
             bool sent = false;
             if (conn.is_connected())
